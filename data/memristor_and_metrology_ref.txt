@@ -1,0 +1,44 @@
+===================================================================
+SAMPLE KNOWLEDGE BASE: SOLID-STATE MEMRISTORS & PRECISION METROLOGY
+===================================================================
+
+1. MULTILAYER HETEROSTRUCTURE MEMRISTORS (ITO/Al2O3/Au)
+-------------------------------------------------------
+- Device Structure: Indium Tin Oxide (ITO) / Aluminum Oxide (Al2O3) / Gold (Au) heterostructure.
+- Tunneling Barrier Dynamics: The 1.6 nm ultra-thin Al2O3 tunneling barrier transitions from static quantum transport to dynamic filamentary switching under an applied electric field (>1.2 V/nm).
+- Switching Mechanism: Oxygen vacancy migration leads to the formation of conductive filaments (CFs), switching the device between Low Resistance State (LRS) and High Resistance State (HRS).
+- In-Memory Computing Relevance: The continuous modulation of conductance emulates biological synaptic weight updates, making ITO/Al2O3/Au memristors ideal for energy-efficient neuromorphic hardware accelerators.
+- Density Functional Theory (DFT) Parameters:
+  * Functional: GGA-PBE (Perdew-Burke-Ernzerhof) with Grimme D3 dispersion correction.
+  * K-point grid: 6x6x1 for monolayer/surface relaxation; 12x12x1 for electronic density of states (DOS).
+  * Cutoff Energy: 500 eV for wavefunctions.
+
+2. PRECISION ATOMIC FREQUENCY STANDARDS & METROLOGY
+--------------------------------------------------
+- Atomic Clocks: Rubidium (Rb) optically pumped frequency standards operating at 6.834 GHz microwave transition (5S1/2 -> 5P3/2 optical pumping).
+- Stability Metrics:
+  * Allan Deviation (sigma_y(tau)): Characterizes frequency instability over averaging time tau.
+  * White Frequency Noise: Slopes as tau^(-1/2) on log-log Allan variance plots.
+  * Flicker Floor: Minimum stability point, typically reached between 10,000s to 100,000s averaging times.
+  * Phase Noise (L(f)): Expressed in dBc/Hz at specified offset frequencies (e.g., 1 Hz, 10 Hz, 100 Hz from carrier).
+
+3. DFT QUANTUM ESPRESSO TEMPLATE FOR Al2O3 BARRIER
+--------------------------------------------------
+&CONTROL
+  calculation = 'scf'
+  restart_mode = 'from_scratch'
+  prefix = 'al2o3_barrier'
+  pseudo_dir = './pseudopotentials/'
+  outdir = './tmp/'
+/
+&SYSTEM
+  ibrav = 0, celldm(1) = 1.88972, nat = 10, ntyp = 2,
+  ecutwfc = 40.0, ecutrho = 320.0
+/
+&ELECTRONS
+  conv_thr = 1.0d-8
+  mixing_beta = 0.7
+/
+ATOMIC_SPECIES
+  Al  26.98154  Al.pbe-n-kjpaw_psl.1.0.0.UPF
+  O   15.99940  O.pbe-n-kjpaw_psl.1.0.0.UPF
