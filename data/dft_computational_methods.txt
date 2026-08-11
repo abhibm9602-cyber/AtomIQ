@@ -1,0 +1,80 @@
+# KNOWLEDGE BASE: DFT COMPUTATIONAL METHODS
+# VERSION: 1.0
+# CATEGORY: Computational Physics, First-Principles Modeling
+
+## 1. DENSITY FUNCTIONAL THEORY (DFT) FOUNDATIONS
+DFT reduces the many-body interacting quantum problem to a set of single-particle equations based on electron density n(r).
+
+### Hohenberg-Kohn Theorems
+1. The ground-state properties of a many-electron system are uniquely determined by an electron density n(r).
+2. The exact ground-state density minimizes the total energy functional E[n].
+
+### Kohn-Sham Equations
+Introduce a fictitious system of non-interacting electrons with the same density as the real system.
+[- (hbar^2 / 2m) * nabla^2 + V_eff(r)] psi_i(r) = epsilon_i psi_i(r)
+Where V_eff(r) = V_ext(r) + V_Hartree(r) + V_XC(r)
+- V_ext(r): External potential (from nuclei/ions).
+- V_Hartree(r): Classical electrostatic interaction.
+- V_XC(r): Exchange-correlation potential (the quantum mechanical many-body effects).
+Density is calculated as: n(r) = sum_i |psi_i(r)|^2
+
+## 2. EXCHANGE-CORRELATION (XC) FUNCTIONALS
+Since the exact form of V_XC is unknown, approximations are required:
+- LDA (Local Density Approximation): Assumes V_XC at a point r depends only on the local density n(r). Prone to overbinding (underestimating lattice constants).
+- GGA (Generalized Gradient Approximation): e.g., PBE (Perdew-Burke-Ernzerhof). Includes the gradient of the density nabla(n(r)). Generally improves thermochemistry but underestimates bandgaps significantly.
+- PBEsol: Specifically revised for solids and surfaces, yielding better lattice parameters for densely packed solids.
+- Meta-GGA (e.g., SCAN): Includes the kinetic energy density or the Laplacian of the density. Accurate for diverse bonds (covalent, metallic, vdW).
+- Hybrid Functionals: e.g., HSE06, B3LYP. Mixes exact Hartree-Fock (HF) exchange with DFT exchange. Crucial for accurate bandgaps in semiconductors and insulators. HSE06 uses a screening parameter (omega = 0.201 to 0.11 bohr^-1) to separate short-range and long-range exchange.
+
+## 3. PSEUDOPOTENTIALS (PPs)
+Core electrons do not participate significantly in chemical bonding. Pseudopotentials replace the strong Coulomb potential of the nucleus and core electrons with an effective, smoother potential.
+- Norm-Conserving (NCPP): Strict charge conservation inside the core radius. High cutoff energy required.
+- Ultrasoft (USPP): Relaxes the norm-conservation constraint, allowing for much lower plane-wave cutoff energies (computationally cheaper).
+- PAW (Projector Augmented Wave): Transforms rapid oscillations near the core into smooth wavefunctions computationally while retaining the exact all-electron physics. Standard in VASP and heavily used in Quantum Espresso.
+
+## 4. CONVERGENCE TESTING
+Before extracting physical properties, one must ensure the basis set and Brillouin zone integration are converged.
+- ecutwfc (Kinetic energy cutoff for wavefunctions): Controls the maximum reciprocal lattice vector |G+k|^2 < E_cut. Typical values: 30 - 100 Ry for NCPPs; 40 - 80 Ry for PAW/USPPs.
+- ecutrho (Cutoff for charge density): For NCPP, ecutrho = 4 * ecutwfc. For USPP/PAW, ecutrho = 8x to 12x ecutwfc.
+- k-point grids: Discretization of the Brillouin zone using the Monkhorst-Pack scheme (e.g., 8x8x8 for a cubic cell). Metals require denser k-meshes than insulators due to the sharp Fermi surface.
+
+## 5. SELF-CONSISTENT FIELD (SCF) CYCLE
+The Kohn-Sham equations are solved iteratively:
+1. Guess initial density n_0(r).
+2. Calculate V_eff(r).
+3. Solve the KS eigenvalue problem for psi_i(r).
+4. Calculate new density n_1(r).
+5. Mix n_0 and n_1 to avoid oscillations (using Broyden or Anderson mixing schemes).
+6. Repeat until |n_new - n_old| < convergence_threshold (typically 10^-6 to 10^-8 Ry).
+
+## 6. STANDARD WORKFLOW: BAND STRUCTURE & DOS
+1. SCF Calculation (`pw.x` in QE): Obtain ground-state charge density.
+2. NSCF Calculation (Non-self-consistent): Calculate eigenvalues on a dense, uniform k-point grid keeping the SCF charge density fixed. Used for Density of States (DOS).
+3. DOS (`dos.x` or `projwfc.x`): Integrate over the BZ. Requires broadening techniques like Gaussian smearing (e.g., 0.05 eV) or the Tetrahedron method to smooth the discrete eigenvalues. Projected DOS (PDOS) resolves contributions by atomic orbital (s, p, d, f).
+4. Bands (`bands.x` in QE): Perform another NSCF calculation along high-symmetry paths in the BZ (e.g., Gamma-X-M-Gamma).
+5. Plotting (`plotbands.x`): Extract data for E vs k visualization.
+
+## 7. STRUCTURAL OPTIMIZATION
+Finding the minimum energy configuration of ions.
+- Algorithms: BFGS (Broyden-Fletcher-Goldfarb-Shanno) quasi-Newton algorithm is standard. Damped molecular dynamics (e.g., quick-min) for systems far from equilibrium.
+- Variable-cell relaxation (vc-relax): Optimizes both atomic coordinates and lattice vectors simultaneously. Essential for stress tensor minimization.
+
+## 8. PHONON CALCULATIONS
+- DFPT (Density Functional Perturbation Theory): Analytical computation of the dynamical matrix (`ph.x` in QE). Does not require supercells; calculates response to atomic displacements directly.
+- Frozen Phonon (Finite Displacement): Manually displaces atoms in a supercell to extract interatomic force constants (e.g., using Phonopy).
+
+## 9. ADVANCED CORRECTIONS
+### Hubbard U (DFT+U)
+Standard LDA/GGA fails for strongly correlated materials (e.g., transition metal oxides like NiO, TiO2) due to spurious self-interaction. DFT+U adds an on-site Coulomb repulsion term (U) to localized d or f orbitals.
+E_{DFT+U} = E_{DFT} + (U/2) * sum_{I,sigma} [ Tr(n^{Isigma}) - Tr(n^{Isigma} n^{Isigma}) ]
+Typical U values for Ti (in TiO2): 3-5 eV.
+
+### Van der Waals (vdW) Corrections
+Standard DFT cannot capture long-range dispersive forces.
+- Grimme D2/D3: Empirical pairwise additions to the DFT energy (E_vdW = - C_6 / R^6). DFT-D3(BJ) includes Becke-Johnson damping to prevent singularities at short distances.
+- vdW-DF: Non-local correlation functionals (e.g., optB86b-vdW) computed directly from the electron density.
+
+## 10. SOFTWARE SPECIFICS
+- Quantum Espresso (QE): Open-source plane-wave code. Main binaries: `pw.x` (SCF), `ph.x` (phonons), `dos.x`, `projwfc.x`.
+- VASP: Commercial standard. Uses INCAR (parameters), POSCAR (structure), KPOINTS (grid), POTCAR (pseudopotentials).
+- Quantum ATK / QuantumWise: Specialized in Non-Equilibrium Green's Function (NEGF) formalisms for modeling electron transport in open boundary conditions (e.g., memristor device simulations, tunneling junctions).
