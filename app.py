@@ -125,10 +125,20 @@ with st.sidebar:
         st.success(f"AI Provider Active: {engine.active_provider}")
     else:
         st.info("Paste Free Groq API Key (gsk_...) above or add to .env")
-        
+    
     st.divider()
     
-    # Knowledge Base Stats
+    # Materials Project API Key
+    saved_mp_key = os.getenv("MP_API_KEY", "")
+    mp_key_input = st.text_input("Materials Project API Key (Optional)", value=saved_mp_key, type="password", help="Get a free key at materialsproject.org/api — enables live lattice data in code generation")
+    if mp_key_input and engine:
+        os.environ["MP_API_KEY"] = mp_key_input
+        engine.mp_api_key = mp_key_input
+        st.success("🔗 Materials Project API Connected")
+    elif not mp_key_input:
+        st.caption("💡 Add MP key for live crystallographic data")
+    
+    st.divider()
     if engine:
         stats = engine.get_kb_stats()
         st.markdown("### 📊 Knowledge Base Stats")
@@ -344,6 +354,11 @@ with tab2:
                             
                     if critique:
                         st.warning(f"**🕵️ Agent 2 (Physics Critic):** {critique}")
+                    
+                    mp_data = result.get("mp_data")
+                    if mp_data:
+                        with st.expander("🌐 Live Materials Project Data Used", expanded=True):
+                            st.code(mp_data, language="yaml")
                 else:
                     code_output = result
                     

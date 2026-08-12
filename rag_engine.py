@@ -11,7 +11,8 @@ import glob
 import time
 import hashlib
 import json
-from typing import Dict, List, Any
+import re
+from typing import Dict, List, Any, Optional
 from dotenv import load_dotenv
 
 # LangChain Core & Integration Imports
@@ -53,6 +54,7 @@ class PhysRAGEngine:
         self.last_retrieval_time = 0.0
         self.last_chunks_searched = 0
         self.total_chunks = 0
+        self.mp_api_key: Optional[str] = os.getenv("MP_API_KEY")
         
         # Initialize light local embedding model (no API key needed for vectorization!)
         print("[PhysRAG] Initializing HuggingFace Embeddings (all-MiniLM-L6-v2)...")
@@ -304,11 +306,79 @@ class PhysRAGEngine:
             "generation_time": gen_time
         }
 
+    def fetch_materials_data(self, query: str) -> Optional[str]:
+        """Query the Materials Project API for real crystallographic data."""
+        if not self.mp_api_key:
+            return None
+        
+        # Extract chemical formula from the query using common patterns
+        formula_match = re.search(r'\b([A-Z][a-z]?(?:\d*[A-Z][a-z]?)*\d*)\b', query)
+        if not formula_match:
+            return None
+        
+        formula = formula_match.group(1)
+        # Basic validation: must have at least one uppercase letter
+        if not any(c.isupper() for c in formula) or len(formula) < 2:
+            return None
+        
+        try:
+            from mp_api.client import MPRester
+            with MPRester(self.mp_api_key) as mpr:
+                # Search for the material by formula
+                docs = mpr.materials.summary.search(
+                    formula=formula,
+                    fields=[
+                        "material_id", "formula_pretty", "structure",
+                        "symmetry", "band_gap", "formation_energy_per_atom",
+                        "energy_above_hull", "is_stable"
+                    ]
+                )
+                
+                if not docs:
+                    return None
+                
+                # Use the most stable entry (lowest energy above hull)
+                doc = sorted(docs, key=lambda x: x.energy_above_hull if x.energy_above_hull is not None else 999)[0]
+                
+                lattice = doc.structure.lattice
+                
+                mp_text = f"""LIVE MATERIALS PROJECT DATA (mp-api) for {doc.formula_pretty}:
+- Materials Project ID: {doc.material_id}
+- Formula: {doc.formula_pretty}
+- Crystal System: {doc.symmetry.crystal_system if doc.symmetry else 'N/A'}
+- Space Group: {doc.symmetry.symbol if doc.symmetry else 'N/A'}
+- Space Group Number: {doc.symmetry.number if doc.symmetry else 'N/A'}
+- Lattice Parameters:
+  a = {lattice.a:.4f} Angstrom
+  b = {lattice.b:.4f} Angstrom
+  c = {lattice.c:.4f} Angstrom
+  alpha = {lattice.alpha:.2f} degrees
+  beta  = {lattice.beta:.2f} degrees
+  gamma = {lattice.gamma:.2f} degrees
+- Volume: {lattice.volume:.4f} Angstrom^3
+- Band Gap: {doc.band_gap:.3f} eV
+- Formation Energy: {doc.formation_energy_per_atom:.4f} eV/atom
+- Energy Above Hull: {doc.energy_above_hull:.4f} eV/atom
+- Thermodynamically Stable: {doc.is_stable}
+- Number of Sites: {len(doc.structure)}
+- Atomic Positions (fractional):"""
+                for site in doc.structure:
+                    mp_text += f"\n  {site.species_string}: ({site.frac_coords[0]:.6f}, {site.frac_coords[1]:.6f}, {site.frac_coords[2]:.6f})"
+                
+                return mp_text
+                
+        except ImportError:
+            print("[PhysRAG] mp-api not installed. Skipping Materials Project lookup.")
+            return None
+        except Exception as e:
+            print(f"[PhysRAG] Materials Project API error: {e}")
+            return None
+
     def generate_dft_or_code_script(self, target_type: str, parameters: str) -> Dict[str, Any]:
-        """RAG-augmented dual-agent code generation: Generator + Critic."""
+        """RAG-augmented dual-agent code generation: Generator + Critic + Live Materials Project data."""
         self.update_llm()
         if not self.llm:
-            return {"code": "# Error: API Key missing or inactive.", "initial_code": "", "critique": "", "context_used": []}
+            return {"code": "# Error: API Key missing or inactive.", "initial_code": "", "critique": "", "context_used": [], "mp_data": None}
         
         # First, retrieve relevant context from the knowledge base
         start_time = time.time()
@@ -317,6 +387,11 @@ class PhysRAGEngine:
         retrieval_time = time.time() - start_time
         context_chunks = [doc.page_content for doc in retrieved_docs]
         context_text = "\n\n---\n\n".join(context_chunks)
+        
+        # Fetch live Materials Project data if API key is available
+        mp_data = self.fetch_materials_data(parameters)
+        if mp_data:
+            context_text = f"{mp_data}\n\n===== LOCAL KNOWLEDGE BASE CONTEXT =====\n\n{context_text}"
         
         # AGENT 1: GENERATOR
         prompt_gen = f"""
@@ -389,13 +464,14 @@ class PhysRAGEngine:
             return {
                 "initial_code": initial_code,
                 "critique": critique,
-                "code": refined_code,  # Mapping refined to 'code' for UI compatibility
+                "code": refined_code,
                 "context_used": context_chunks,
                 "retrieval_time": retrieval_time,
-                "generation_time": gen_time
+                "generation_time": gen_time,
+                "mp_data": mp_data
             }
         except Exception as e:
-            return {"code": f"# API Error: {e}", "initial_code": "", "critique": "", "context_used": [], "retrieval_time": 0, "generation_time": 0}
+            return {"code": f"# API Error: {e}", "initial_code": "", "critique": "", "context_used": [], "retrieval_time": 0, "generation_time": 0, "mp_data": None}
 
     def get_kb_stats(self) -> Dict[str, Any]:
         """Returns knowledge base statistics."""

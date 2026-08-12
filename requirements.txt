@@ -18,3 +18,6 @@ pysqlite3-binary>=0.5.3
 # Numerical & Data Processing
 numpy>=1.24.0
 scipy>=1.10.0
+
+# Materials Project Live API
+mp-api>=0.39.0
