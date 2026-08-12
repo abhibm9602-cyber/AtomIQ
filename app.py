@@ -308,11 +308,13 @@ with tab2:
         
     if st.button("⚡ Generate Code Script"):
         if engine:
-            with st.spinner("Retrieving KB context & generating script via AI Engine..."):
+            with st.spinner("Agentic Workflow: Retrieving KB context, drafting, and critiquing script..."):
                 result = engine.generate_dft_or_code_script(target_type, system_input)
                 
                 if isinstance(result, dict):
                     code_output = result["code"]
+                    initial_code = result.get("initial_code", "")
+                    critique = result.get("critique", "")
                     context_used = result.get("context_used", [])
                     
                     # Performance metrics
@@ -320,17 +322,24 @@ with tab2:
                     with mcol1:
                         st.markdown(f"""<div class="metric-card"><div class="metric-value">{result.get('retrieval_time', 0):.3f}s</div><div class="metric-label">KB Retrieval</div></div>""", unsafe_allow_html=True)
                     with mcol2:
-                        st.markdown(f"""<div class="metric-card"><div class="metric-value">{result.get('generation_time', 0):.2f}s</div><div class="metric-label">Code Generation</div></div>""", unsafe_allow_html=True)
+                        st.markdown(f"""<div class="metric-card"><div class="metric-value">{result.get('generation_time', 0):.2f}s</div><div class="metric-label">Dual-Agent Generation</div></div>""", unsafe_allow_html=True)
                     st.write("")
                     
                     if context_used:
                         with st.expander("📚 Knowledge Base Context Used for Generation"):
                             for i, ctx in enumerate(context_used[:3]):
                                 st.info(f"**Context {i+1}:** {ctx[:200]}...")
+                                
+                    if initial_code:
+                        with st.expander("🤖 Agent 1: Initial Draft Script"):
+                            st.code(initial_code, language="python" if "Python" in target_type else "text")
+                            
+                    if critique:
+                        st.warning(f"**🕵️ Agent 2 (Physics Critic):** {critique}")
                 else:
                     code_output = result
                     
-                st.markdown("### Generated Production Code:")
+                st.markdown("### ✨ Final Refined Production Code:")
                 if "Python" in target_type or "Qiskit" in target_type or "Cirq" in target_type:
                     lang = "python"
                 elif "LAMMPS" in target_type:
