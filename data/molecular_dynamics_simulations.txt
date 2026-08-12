@@ -1,0 +1,75 @@
+# Molecular Dynamics Simulations
+
+## Classical Molecular Dynamics
+- Simulates the temporal evolution of a system of interacting particles by numerically integrating Newton's equations of motion.
+- Force on particle i: F_i = - nabla_i U(r_1, r_2, ..., r_N) = m_i a_i, where U is the interatomic potential energy.
+- Verlet integration algorithm: r(t + dt) = 2r(t) - r(t - dt) + a(t) dt^2. Efficient and time-reversible.
+- Velocity-Verlet algorithm:
+  - r(t + dt) = r(t) + v(t)dt + 0.5 a(t)dt^2
+  - v(t + dt/2) = v(t) + 0.5 a(t)dt
+  - a(t + dt) = F(r(t + dt)) / m
+  - v(t + dt) = v(t + dt/2) + 0.5 a(t + dt)dt. (Most widely used).
+- Time steps dt must be shorter than the fastest vibrational frequency in the system (typically 1-2 femtoseconds for atomic systems).
+
+## Interatomic Potentials
+- Empirical mathematical functions representing the potential energy surface U(r^N).
+- Lennard-Jones (LJ) potential (noble gases): V(r) = 4 epsilon [(sigma/r)^12 - (sigma/r)^6]. Repulsive term r^-12 (Pauli exclusion), attractive term r^-6 (van der Waals).
+- Buckingham potential: V(r) = A exp(-B r) - C / r^6.
+- Morse potential: V(r) = D_e (1 - exp(-a(r - r_e)))^2 - D_e. Good for single covalent bonds.
+- Embedded Atom Method (EAM) for metals: E_total = sum_i F(rho_i) + 0.5 sum_i sum_j!=i phi(r_ij). F is the embedding energy as a function of the local electron density rho_i, phi is a pair repulsion. Overcomes the failure of pair potentials for metallic cohesion.
+- Tersoff / Stillinger-Weber potentials for semiconductors (Si, C). Include 3-body angular terms to enforce directional covalent bonding (tetrahedral geometry).
+- ReaxFF (Reactive Force Field): Bond orders are calculated dynamically from interatomic distances, allowing for bond breaking and formation during the simulation.
+
+## Machine-Learned Interatomic Potentials (MLIPs)
+- Train machine learning models on high-fidelity Density Functional Theory (DFT) data (energies, forces, stresses) to achieve DFT accuracy at classical MD speeds.
+- GAP (Gaussian Approximation Potentials): uses kernel ridge regression and the SOAP (Smooth Overlap of Atomic Positions) descriptor.
+- NNP (Neural Network Potentials): e.g., Behler-Parrinello symmetry functions (ACSF) fed into feedforward neural networks.
+- Graph Neural Network (GNN) potentials: NequIP, MACE, Allegro. Directly learn equivariant representations from the 3D atomic graph, achieving state-of-the-art accuracy and data efficiency.
+- DeePMD: Deep Potential Molecular Dynamics, provides a smooth, end-to-end differentiable mapping from coordinates to energy.
+
+## Ab Initio Molecular Dynamics (AIMD)
+- Forces are computed "on-the-fly" using quantum mechanical methods (usually DFT) rather than empirical potentials.
+- Born-Oppenheimer MD (BOMD): The electronic structure problem is solved to the ground state at every MD step. Very accurate but computationally expensive (limited to ~100s of atoms, ~10s of ps).
+- Car-Parrinello MD (CPMD): Introduces fictitious electron dynamics coupled to nuclear dynamics. Uses a modified Lagrangian to propagate electronic orbitals simultaneously with nuclei, avoiding full self-consistent field (SCF) convergence at each step.
+
+## Thermostats and Barostats (Ensembles)
+- NVE Ensemble (Microcanonical): Constant Number of particles, Volume, and Energy. Natural outcome of integrating Newton's equations.
+- NVT Ensemble (Canonical): Constant Temperature. Uses thermostats to mimic coupling to a heat bath.
+  - Berendsen thermostat: rescales velocities, does not strictly sample the canonical ensemble.
+  - Nosé-Hoover thermostat: introduces an extended Lagrangian with a fictitious heat bath mass Q, accurately sampling NVT.
+  - Langevin dynamics: adds a stochastic friction term and a random noise term (Brownian motion) to the equations of motion.
+- NPT Ensemble (Isothermal-Isobaric): Constant Pressure and Temperature. Uses barostats to fluctuate the simulation box volume.
+  - Parrinello-Rahman barostat: allows changes in both the volume and the shape of the simulation cell, useful for studying crystal phase transitions.
+
+## Observables and Analysis
+- Radial Distribution Function (RDF) g(r): Probability of finding a particle at distance r from a reference particle, relative to an ideal gas. Peaks indicate local structure (solid vs. liquid).
+- Mean Square Displacement (MSD): <|r(t) - r(0)|^2>. Used to measure atomic mobility.
+- Diffusion coefficient D: Computed from the long-time slope of the MSD via the Einstein relation: D = lim(t->inf) MSD / (6t).
+- Velocity Autocorrelation Function (VACF): <v(t) . v(0)>. Its Fourier transform gives the vibrational density of states (phonon spectrum).
+- Stress tensor P_ij = (1/V) [ sum_k m_k v_k,i v_k,j + sum_k < l F_kl,i r_kl,j ]. (Kinetic + Virial contributions).
+
+## Applications
+- Thermal Conductivity: calculated using non-equilibrium MD (NEMD, applying a thermal gradient) or equilibrium MD via the Green-Kubo formalism (integrating the heat flux autocorrelation function).
+- Mechanical Properties: simulating tensile tests, crack propagation, dislocation dynamics, yield stress, and elastic moduli (Young's modulus, Poisson ratio).
+- Phase Transitions: melting, solidification, glass transition, martensitic transformations.
+- Biomolecular MD: protein folding, ligand docking, lipid bilayer dynamics (using force fields like CHARMM, AMBER, GROMOS).
+
+## LAMMPS Input Script Structure
+- `units`: specifies the system of units (e.g., `metal`, `real`, `lj`).
+- `atom_style`: defines what properties atoms store (e.g., `atomic`, `charge`, `full`).
+- `read_data` or `lattice` / `create_atoms`: initializes the geometry.
+- `pair_style` and `pair_coeff`: defines the interatomic potential model.
+- `neighbor` and `neigh_modify`: controls the Verlet neighbor list skin distance and update frequency.
+- `fix`: applies operations to groups of atoms during timestepping (e.g., `fix nvt`, `fix npt`, `fix wall`).
+- `compute`: calculates properties on the fly (e.g., RDF, MSD, stresses).
+- `thermo` and `thermo_style`: controls the output of thermodynamic data to the log file.
+- `dump`: outputs atom trajectories (coordinates, velocities, forces) to files.
+- `run`: specifies the number of timesteps to execute.
+- `minimize`: performs an energy minimization (e.g., conjugate gradient) before starting the MD.
+
+## Advanced Techniques
+- Steered Molecular Dynamics (SMD): applying external forces to pull molecules along a reaction coordinate.
+- Umbrella Sampling: a free energy method using biasing harmonic potentials to sample rare events and high-energy barriers. Calculate the Potential of Mean Force (PMF).
+- Metadynamics: enhances sampling by adding history-dependent Gaussian penalty potentials to discourage the system from visiting previously sampled states in collective variable (CV) space.
+- Coarse-Grained MD (CGMD): groups multiple atoms into "beads" to simulate larger length and time scales (e.g., Martini force field).
+- Replica Exchange MD (REMD): simulates multiple replicas at different temperatures, periodically swapping configurations to cross energy barriers and find global minima.

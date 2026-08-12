@@ -4,3 +4,4 @@ chroma_db/
 .env
 *.pyc
 .pytest_cache/
+data/*.pdf

@@ -1,0 +1,98 @@
+# Condensed Matter Theory
+
+## Free Electron Model
+- Sommerfeld model treats valence electrons as a non-interacting quantum gas of fermions.
+- Drude model is the classical predecessor, explaining conductivity with mean free path and scattering time tau.
+- Energy levels in a 3D box of volume V = L^3: E_k = (hbar^2 k^2) / (2m), where k_x, k_y, k_z = 2pi*n/L.
+- Fermi Energy E_F is the energy of the highest occupied state at T=0 K.
+- E_F = (hbar^2/2m)(3pi^2 n)^(2/3), where n = N/V is the electron number density.
+- Fermi wave vector k_F = (3pi^2 n)^(1/3); Fermi velocity v_F = hbar k_F / m.
+- Density of states D(E) = (V/(2pi^2))(2m/hbar^2)^(3/2) sqrt(E).
+- Heat capacity of the free electron gas C_V = (pi^2 / 2) N k_B (T / T_F), proportional to T.
+
+## Band Theory
+- Electrons in a periodic crystalline potential U(r) = U(r + R), where R is a Bravais lattice vector.
+- Bloch's Theorem: the wavefunctions are of the form psi_nk(r) = e^(ik.r) u_nk(r), where u_nk(r) has the periodicity of the lattice.
+- The wave vector k is restricted to the first Brillouin Zone (BZ) in reciprocal space.
+- Energy bands E_n(k) are separated by band gaps where no electron states can exist.
+- Nearly free electron model: weak periodic potential opens a gap of magnitude 2|U_G| at the BZ boundaries (k = +/- G/2).
+- Effective mass tensor: (1/m*)_ij = (1/hbar^2) (partial^2 E / partial k_i partial k_j).
+- Metals have partially filled bands, insulators have completely filled bands separated by a large gap from empty bands.
+
+## Tight-Binding Model
+- Approximation assuming electrons are tightly bound to their respective atoms.
+- Hamiltonian H = sum_i(epsilon_i c^dagger_i c_i) - sum_<i,j>(t_ij c^dagger_i c_j + h.c.).
+- epsilon_i is the on-site orbital energy; t_ij is the hopping parameter (transfer integral) between neighboring sites i and j.
+- For a 1D chain with lattice constant a: E(k) = epsilon - 2t cos(ka), resulting in a band width of 4t.
+- Wannier functions are the real-space counterparts to Bloch functions, localized around individual lattice sites.
+
+## Semiconductors
+- Insulators with small band gaps (E_g ~ 1-3 eV), allowing significant thermal excitation of electrons into the conduction band at room temperature.
+- Intrinsic semiconductors (e.g., Si, Ge): electron concentration n = hole concentration p = n_i.
+- Extrinsic semiconductors: doped with impurities to increase n (n-type, donors) or p (p-type, acceptors).
+- Law of mass action: n*p = n_i^2 = N_c N_v e^(-E_g / k_B T), valid for non-degenerate doping.
+- Donor levels are just below the conduction band edge; acceptor levels are just above the valence band edge.
+- P-N junctions form depletion regions, creating built-in electric fields and enabling diode rectification and solar cells.
+
+## Superconductivity
+- Characterized by zero electrical resistance and perfect diamagnetism (Meissner effect) below a critical temperature T_c.
+- London equations describe the electrodynamics: nabla^2 B = B / lambda^2, where lambda is the London penetration depth.
+- Ginzburg-Landau theory: phenomenological macroscopic quantum model introducing a complex order parameter psi(r).
+- Coherence length xi dictates the spatial variation of the superconducting state.
+- Type-I superconductors expel magnetic fields completely; Type-II allow magnetic flux penetration in quantized vortices (Abrikosov lattice).
+- BCS Theory (Bardeen-Cooper-Schrieffer): microscopic theory based on electron-phonon interaction mediating an attractive force.
+- Cooper pairs: electrons of opposite momentum and spin (k_up, -k_down) form bound states.
+- BCS Energy gap Delta(T): the minimum energy required to break a Cooper pair. Delta(0) ~ 1.76 k_B T_c.
+
+## Magnetism
+- Arises primarily from electron spin and orbital angular momentum.
+- Bohr-van Leeuwen theorem: classical physics cannot explain diamagnetism or paramagnetism.
+- Curie's Law for paramagnets: Susceptibility chi = C / T.
+- Ferromagnetism: spontaneous magnetization below the Curie temperature T_C.
+- Heisenberg model: H = - sum_<i,j> J_ij S_i . S_j. J > 0 favors ferromagnetism (spins parallel); J < 0 favors antiferromagnetism (spins antiparallel).
+- Exchange interactions stem from the Pauli exclusion principle and Coulomb repulsion.
+- Spin waves (Magnons): low-energy collective excitations of the spin system in a ferromagnet, following dispersion E(k) ~ k^2.
+- Itinerant magnetism (Stoner criterion): ferromagnetism in metals (Fe, Co, Ni) when U * D(E_F) > 1, where U is Coulomb repulsion and D(E_F) is DOS at Fermi level.
+
+## Phonons
+- Quantized collective vibrational modes of the crystal lattice.
+- Acoustic phonons: atoms in a unit cell move in phase (omega goes to 0 as k goes to 0). E ~ hbar v_s k.
+- Optical phonons: atoms in a unit cell move out of phase (omega is non-zero at k=0, can interact with electromagnetic radiation).
+- Dispersion relation omega(k) is determined by the dynamical matrix (interatomic force constants).
+- Einstein model: assumes all atoms vibrate independently with a single frequency omega_E. Explains high-T heat capacity (Dulong-Petit law).
+- Debye model: treats the lattice as an elastic continuum for low-frequency modes, assuming a linear dispersion omega = v k up to a cutoff Debye frequency omega_D.
+- Yields the T^3 dependence of lattice heat capacity at low temperatures: C_V ~ (T/Theta_D)^3.
+
+## Topological Insulators
+- Materials with insulating bulk but conducting, robust surface or edge states.
+- 2D Topological Insulator (Quantum Spin Hall effect): protected edge states characterized by a Z2 topological invariant (nu=0 trivial, nu=1 topological).
+- Time-reversal symmetry is crucial for protecting the Dirac cone on the surface.
+- Bulk-boundary correspondence: topological properties of the bulk band structure dictate the presence of boundary states.
+- Berry phase, Berry connection, and Berry curvature are essential mathematical tools.
+- Chern number characterizes Quantum Hall (broken time-reversal) systems.
+- 3D Topological Insulators (e.g., Bi2Se3) host robust 2D Dirac fermion surface states.
+
+## Strongly Correlated Systems
+- Systems where electron-electron interactions (Coulomb repulsion) are dominant and cannot be treated with the single-particle (band theory) picture.
+- Hubbard model: H = -t sum_<i,j>,sigma (c^dagger_i,sigma c_j,sigma + h.c.) + U sum_i n_i,up n_i,down.
+- t defines kinetic energy (delocalization), U defines Coulomb repulsion (localization).
+- Mott transition: metal-to-insulator transition driven by interaction (U) rather than band filling. If U >> t at half-filling, electrons localize to avoid U, becoming a Mott insulator.
+- High-T_c superconductors (cuprates) are typically doped Mott insulators, described by the t-J model.
+- Kondo effect: increased scattering of conduction electrons off magnetic impurities at low temperatures, leading to an upturn in resistivity.
+
+## Green's Functions and Many-Body Theory
+- Retarded Green's function G^R(k, omega): describes the propagation of an added particle/hole.
+- G^R(k, omega) = 1 / (omega - epsilon_k - Sigma(k, omega) + i eta).
+- Self-energy Sigma(k, omega): encapsulates all many-body interaction effects. Real part describes energy shift; imaginary part gives the scattering rate (inverse lifetime).
+- Spectral function A(k, omega) = -(1/pi) Im G^R(k, omega). Represents the generalized density of states.
+- GW Approximation: self-energy is computed as the product of the single-particle Green's function (G) and the dynamically screened Coulomb interaction (W). Highly accurate for band gaps.
+- Bethe-Salpeter Equation (BSE): used to compute optical absorption spectra, accounting for electron-hole interaction (excitons).
+- Excitons: bound electron-hole pairs. Frenkel excitons (tightly bound, high binding energy), Wannier-Mott excitons (loosely bound, in semiconductors, binding energy ~ 10-100 meV).
+
+## Landau Fermi Liquid Theory
+- Phenomenological theory for interacting fermions in normal metals.
+- Interactions adiabatically transform free electrons into "quasiparticles".
+- Quasiparticles have the same charge and spin as electrons but an effective mass m* and a finite lifetime (scaling as 1/(E-E_F)^2).
+- The low-temperature properties (heat capacity, susceptibility, conductivity) are qualitatively similar to the free electron gas, but with renormalized parameters.
+- Described by Landau parameters F_l^s and F_l^a characterizing the interactions between quasiparticles at the Fermi surface.
+- Breaks down in 1D systems (Luttinger liquids) and at Quantum Critical Points.

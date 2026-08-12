@@ -1,0 +1,62 @@
+# Machine Learning in Materials Science
+
+## ML for Materials Discovery
+- Paradigm shift from trial-and-error experimental synthesis and computationally expensive ab initio calculations to data-driven prediction.
+- High-throughput virtual screening: evaluating thousands of hypothetical crystal structures using fast ML surrogate models to identify promising candidates.
+- Inverse design: specifying desired target properties (e.g., band gap = 1.5 eV, high stability) and using generative ML to output the corresponding atomic structures or compositions.
+- Accelerates the discovery of novel battery cathodes, solid-state electrolytes, thermoelectric materials, and catalysts.
+
+## Descriptors and Features
+- Raw Cartesian coordinates are not rotationally, translationally, or permutationally invariant. Descriptors map atomic environments to invariant feature vectors.
+- Compositional features: based on elemental properties (e.g., electronegativity, atomic radius, valence electrons) computed from the stoichiometric formula (e.g., Magpie features).
+- Coulomb Matrix: M_ij = Z_i Z_j / |R_i - R_j| for i!=j, M_ii = 0.5 Z_i^2.4. Global descriptor, requires padding for varying molecule sizes.
+- ACSF (Atom-Centered Symmetry Functions): local radial and angular basis functions capturing the local atomic environment.
+- SOAP (Smooth Overlap of Atomic Positions): expands the local atomic density into spherical harmonics and spherical Bessel functions, forming a rotationally invariant power spectrum. Provides rigorous geometric completeness.
+- ACE (Atomic Cluster Expansion): generalized framework for systematically complete linear basis sets for local environments.
+
+## Graph Neural Networks (GNNs) for Crystals
+- Crystals naturally map to graphs: atoms are nodes (features = atomic number, embedding), bonds/distances are edges.
+- Message Passing Neural Networks (MPNNs): nodes iteratively update their hidden state by aggregating messages from neighbors.
+- CGCNN (Crystal Graph Convolutional Neural Network): early architecture using bond distance embeddings and node feature updates.
+- MEGNet (Materials Graph Network): incorporates global state variables (e.g., temperature, pressure) along with node and edge features.
+- SchNet: uses continuous-filter convolutional layers, modeling many-body interactions based on distances without explicitly defining bonds.
+- DimeNet, GemNet: incorporate directional message passing (bond angles, dihedral angles) for higher accuracy, distinguishing structures that distance-only models cannot.
+- MACE, NequIP: E(3)-equivariant GNNs that preserve the rotational symmetries of physics tensors, operating on spherical harmonic representations. State-of-the-art accuracy for potentials.
+
+## Property Prediction
+- Training datasets derived from high-throughput DFT calculations (e.g., Materials Project, OQMD, AFLOW).
+- Target properties: Formation energy (E_form), band gap (E_g), bulk/shear moduli, Debye temperature, thermal conductivity, magnetic moments.
+- Classification tasks: Metal vs. non-metal, topologically trivial vs. non-trivial, stable vs. unstable (distance to the convex hull, E_hull).
+- Model evaluation: Mean Absolute Error (MAE), Root Mean Square Error (RMSE), R^2 coefficient.
+- Matbench: a curated suite of diverse benchmark datasets for evaluating ML models on materials science tasks.
+- OCP (Open Catalyst Project) OC20/OC22 datasets: massive datasets for training models to predict adsorption energies and forces for catalyst design.
+
+## Active Learning and Uncertainty
+- Strategy to efficiently sample the vast chemical space by only labeling (calculating via DFT) the most informative data points.
+- Uncertainty quantification (UQ) is critical: the model must "know what it doesn't know".
+- Ensemble methods / Query-by-committee: training multiple models on subsets of data. The variance of their predictions estimates epistemic uncertainty.
+- Gaussian Processes (GPs) and Bayesian Neural Networks naturally provide posterior predictive distributions (mean and variance).
+- Acquisition functions (e.g., Expected Improvement, Upper Confidence Bound) guide the selection of new candidates to simultaneously explore high-uncertainty regions and exploit known high-performing regions (Bayesian Optimization).
+
+## Generative Models for Crystal Structure
+- Goal: generate valid, stable, and novel crystal structures (atomic species + lattice vectors + fractional coordinates).
+- VAEs (Variational Autoencoders): compress structures into a continuous latent space. Decoding interpolations in latent space yields new materials. CDVAE (Crystal Diffusion VAE) combines VAEs with diffusion.
+- GANs (Generative Adversarial Networks): a generator creates structures to fool a discriminator trained on real crystals.
+- Flow-matching and Denoising Diffusion Probabilistic Models (DDPM): iteratively add noise to coordinates/lattice, then learn to reverse the noising process to generate structures from pure noise. E.g., MatterGen, UniMat.
+
+## Pre-training and Foundational Models
+- Transfer learning: pre-training a GNN on millions of structures for self-supervised tasks (e.g., predicting masked atoms, denoising coordinates), then fine-tuning on a small dataset for a specific property.
+- "Universal" Interatomic Potentials: foundational models trained on nearly all available DFT data across the periodic table.
+- M3GNet, CHGNet (Charge-Informed Graph Neural Network), MACE-MP-0.
+- These models act as out-of-the-box surrogate DFT engines, capable of relaxing arbitrary crystal structures, calculating phonon spectra, and running MD for completely unseen materials with high reliability.
+
+## Physics-Informed Neural Networks (PINNs)
+- Embedding known physical laws (differential equations, thermodynamics) directly into the neural network architecture or loss function.
+- Loss = L_data + lambda * L_physics.
+- Examples: enforcing energy conservation, exact thermodynamic relations, or satisfying the Navier-Stokes equations for fluid flow. Ensures predictions are physically consistent even outside the training domain.
+
+## RAG for Materials Science
+- Retrieval-Augmented Generation (RAG) utilizes Large Language Models (LLMs) combined with vector databases of scientific literature.
+- Addresses the unstructured data problem: synthesizing synthesis recipes, extraction of experimental property data (T_c, yield strength) buried in PDF text and tables.
+- Systems like MatSciBERT or specialized Llama models embed queries and retrieve relevant paragraphs from millions of papers, grounding the LLM's response in factual literature to prevent hallucination.
+- Automating literature reviews, extracting reaction conditions, and building structured knowledge bases (like this one) from raw scientific text.

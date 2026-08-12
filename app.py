@@ -156,14 +156,33 @@ with tab1:
     
     sample_queries = [
         "Select a sample query...",
+        # Memristors & DFT
         "Explain the switching mechanism in ITO/Al2O3/Au memristor heterostructures.",
         "What are the recommended DFT k-point grid and cutoff energy parameters for Al2O3?",
-        "How is Allan deviation calculated for rubidium atomic frequency standards?",
-        "Explain the crossbar array architecture for neuromorphic computing.",
-        "What are Bell states and how are they used in quantum teleportation?",
         "Compare PAW, ultrasoft, and norm-conserving pseudopotentials for DFT calculations.",
+        # Metrology
+        "How is Allan deviation calculated for rubidium atomic frequency standards?",
+        # Neuromorphic
+        "Explain the crossbar array architecture for neuromorphic computing.",
+        # Quantum Information
+        "What are Bell states and how are they used in quantum teleportation?",
         "What is the CHSH inequality and how does quantum mechanics violate it?",
-        "Describe the Burstein-Moss effect in ITO transparent conducting oxides."
+        # QFT
+        "Explain the path integral formulation of quantum field theory.",
+        "What is spontaneous symmetry breaking and the Higgs mechanism?",
+        # Condensed Matter
+        "Derive the Fermi energy for a 3D free electron gas.",
+        "Explain BCS theory of superconductivity and Cooper pair formation.",
+        # ML for Materials
+        "What are machine-learned interatomic potentials (MACE, NequIP, DeePMD)?",
+        # Semiconductor Devices
+        "Explain Fowler-Nordheim tunneling in ultra-thin oxide barriers.",
+        # Statistical Mechanics
+        "Derive the canonical partition function and its connection to free energy.",
+        # MD Simulations
+        "Explain the velocity-Verlet algorithm for molecular dynamics.",
+        # Spectroscopy
+        "How do you extract the band gap from a Tauc plot using UV-Vis spectroscopy?"
     ]
     
     selected_sample = st.selectbox("Sample Physics Queries:", sample_queries)
@@ -225,11 +244,65 @@ with tab2:
     
     col1, col2 = st.columns(2)
     with col1:
-        target_type = st.selectbox("Target Code Type:", [
-            "Quantum Espresso (DFT Input)",
-            "Python Metrology (Allan Variance Analysis)",
-            "Quantum Circuit (Qiskit)"
+        code_category = st.selectbox("Code Category:", [
+            "🔬 DFT & Electronic Structure",
+            "🧪 Molecular Dynamics",
+            "📊 Data Analysis & Metrology",
+            "💻 Quantum Computing",
+            "🧠 Machine Learning for Materials",
+            "📐 Statistical Mechanics"
         ])
+    
+    # Dynamic target types based on category
+    code_type_map = {
+        "🔬 DFT & Electronic Structure": [
+            "Quantum Espresso — SCF Calculation",
+            "Quantum Espresso — Band Structure",
+            "Quantum Espresso — DOS / PDOS",
+            "Quantum Espresso — Phonon Calculation (DFPT)",
+            "Quantum Espresso — Structural Relaxation",
+            "VASP — INCAR/POSCAR/KPOINTS Generation",
+            "Python — DFT Post-Processing (pymatgen)"
+        ],
+        "🧪 Molecular Dynamics": [
+            "LAMMPS — Metal Simulation (EAM)",
+            "LAMMPS — Thermal Conductivity (Green-Kubo)",
+            "Python — MD with ASE (Atomic Simulation Environment)",
+            "Python — Radial Distribution Function Analysis"
+        ],
+        "📊 Data Analysis & Metrology": [
+            "Python — Allan Variance / Allan Deviation",
+            "Python — Phase Noise Analysis",
+            "Python — XRD Pattern Simulation",
+            "Python — Tauc Plot Band Gap Extraction",
+            "Python — IV Curve Analysis (Memristor)",
+            "Python — Impedance Spectroscopy (Nyquist Plot)"
+        ],
+        "💻 Quantum Computing": [
+            "Qiskit — Quantum Teleportation Circuit",
+            "Qiskit — Grover's Search Algorithm",
+            "Qiskit — VQE (Variational Quantum Eigensolver)",
+            "Qiskit — Bell State Preparation & Measurement",
+            "Cirq — Quantum Circuit Simulation"
+        ],
+        "🧠 Machine Learning for Materials": [
+            "Python — Crystal Graph Neural Network (CGCNN)",
+            "Python — Band Gap Prediction (Random Forest)",
+            "Python — Formation Energy Prediction",
+            "Python — Materials Project API Data Fetch",
+            "Python — SOAP Descriptor Calculation"
+        ],
+        "📐 Statistical Mechanics": [
+            "Python — 2D Ising Model (Monte Carlo)",
+            "Python — Metropolis Algorithm Simulation",
+            "Python — Fermi-Dirac Distribution Plotter",
+            "Python — Phonon Density of States",
+            "Python — Boltzmann Transport Equation Solver"
+        ]
+    }
+    
+    with col1:
+        target_type = st.selectbox("Specific Script:", code_type_map.get(code_category, ["Quantum Espresso — SCF Calculation"]))
     with col2:
         system_input = st.text_input("Material/System Parameters:", "Al2O3 barrier 1.6 nm on ITO substrate, cutoff 40 Ry")
         
@@ -258,7 +331,14 @@ with tab2:
                     code_output = result
                     
                 st.markdown("### Generated Production Code:")
-                lang = "python" if "Python" in target_type or "Quantum Circuit" in target_type else "fortran"
+                if "Python" in target_type or "Qiskit" in target_type or "Cirq" in target_type:
+                    lang = "python"
+                elif "LAMMPS" in target_type:
+                    lang = "bash"
+                elif "VASP" in target_type:
+                    lang = "text"
+                else:
+                    lang = "fortran"
                 st.code(code_output, language=lang)
 
 # ---------------------------------------------------------

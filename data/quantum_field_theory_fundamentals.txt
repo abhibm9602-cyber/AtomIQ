@@ -1,0 +1,111 @@
+# Quantum Field Theory Fundamentals
+
+## Classical Field Theory
+- Lagrangian density L is a function of the field phi, its derivatives (partial_mu phi), and space-time coordinates.
+- Action S = integral d^4x L(phi, partial_mu phi).
+- The principle of least action delta S = 0 leads to the Euler-Lagrange equations.
+- Euler-Lagrange equations: partial_mu (partial L / partial (partial_mu phi)) - partial L / partial phi = 0.
+- For a real scalar field, L = (1/2)(partial_mu phi)(partial^mu phi) - (1/2)m^2 phi^2 - V(phi).
+
+## Canonical Quantization
+- Fields are promoted to operators: phi(x) -> phi_hat(x).
+- Conjugate momentum pi(x) = partial L / partial (partial_0 phi).
+- Equal-time commutation relations: [phi(x,t), pi(y,t)] = i hbar delta^3(x-y).
+- The field operator can be expanded in terms of creation (a^dagger_k) and annihilation (a_k) operators.
+- phi(x) = integral d^3k / ((2pi)^3 2omega_k)^(1/2) [a_k e^(-ikx) + a^dagger_k e^(ikx)].
+- Commutation relations for ladder operators: [a_k, a^dagger_p] = (2pi)^3 delta^3(k-p).
+- Vacuum state |0> defined by a_k|0> = 0 for all k.
+
+## Klein-Gordon Equation
+- Describes spin-0 massive particles (e.g., Higgs boson, pions).
+- Equation of motion: (partial^2 + m^2)phi = 0, where partial^2 = partial_mu partial^mu = d^2/dt^2 - nabla^2.
+- Represents relativistic energy-momentum relation: E^2 = p^2c^2 + m^2c^4.
+- Solutions are plane wave expansions, yielding both positive and negative energy states.
+- The scalar propagator (Feynman propagator): D_F(x-y) = <0|T{phi(x)phi(y)}|0> = integral d^4p/(2pi)^4 i/(p^2 - m^2 + i epsilon) e^(-ip(x-y)).
+
+## Dirac Equation
+- Describes spin-1/2 fermions (quarks, leptons).
+- Equation: (i hbar gamma^mu partial_mu - mc)psi = 0.
+- The gamma matrices satisfy the Clifford algebra: {gamma^mu, gamma^nu} = 2 eta^(mu nu).
+- psi is a 4-component Dirac spinor, not a spacetime vector.
+- In the Weyl (chiral) representation, gamma^0 = [0 I; I 0], gamma^i = [0 sigma^i; -sigma^i 0], where sigma^i are Pauli matrices.
+- Leads to the prediction of antimatter, with positive and negative energy solutions (u(p,s) and v(p,s) spinors).
+
+## Quantum Electrodynamics (QED)
+- The fundamental theory of electromagnetic interactions between electrically charged particles.
+- Lagrangian: L_QED = psi_bar(i gamma^mu D_mu - m)psi - (1/4)F_mu_nu F^mu_nu.
+- Gauge covariant derivative D_mu = partial_mu + i e A_mu.
+- Field strength tensor F_mu_nu = partial_mu A_nu - partial_nu A_mu.
+- Interaction Lagrangian L_int = -e psi_bar gamma^mu psi A_mu, coupling the fermion current j^mu to the photon field A_mu.
+- Fine structure constant alpha = e^2 / (4 pi epsilon_0 hbar c) ~ 1/137.036.
+
+## Feynman Diagrams
+- Pictorial representations of perturbative contributions to transition amplitudes (S-matrix elements).
+- Fermion propagator: i(gamma^mu p_mu + m) / (p^2 - m^2 + i epsilon).
+- Photon propagator (Feynman gauge): -i eta_mu_nu / (q^2 + i epsilon).
+- Vertex factor: -i e gamma^mu for the fundamental QED vertex (electron-positron-photon).
+- Loop diagrams involve integrals over internal four-momenta: integral d^4k/(2pi)^4.
+- Momentum conservation is enforced at each vertex.
+
+## Renormalization
+- Used to handle UV divergences in loop calculations (e.g., electron self-energy, vacuum polarization).
+- Dimensional regularization: calculate in d = 4 - epsilon dimensions, isolate the 1/epsilon poles.
+- Introduce counterterms in the Lagrangian to cancel infinities.
+- Bare parameters vs. renormalized (physical) parameters: m_bare = m_physical + delta_m.
+- Running coupling constant alpha(Q^2) due to vacuum polarization screening the bare charge.
+- QED running coupling: alpha(Q^2) = alpha(m_e^2) / [1 - (alpha(m_e^2)/3pi) ln(Q^2/m_e^2)] for Q^2 >> m_e^2.
+
+## Path Integral Formulation
+- Formulated by Feynman, based on summing over all possible classical histories.
+- Generating functional Z[J] = integral D[phi] exp(i/hbar S[phi] + i integral d^4x J(x)phi(x)).
+- For free fields, Z[J] can be evaluated exactly as a Gaussian integral.
+- n-point Green's functions (correlation functions) obtained via functional derivatives of Z[J] with respect to sources J.
+- Connects quantum mechanics to statistical mechanics via Wick rotation t -> -i tau (imaginary time).
+
+## Symmetry and Conservation
+- Noether's Theorem: Every continuous symmetry of the action corresponds to a conserved current and charge.
+- Translation in time -> Energy conservation; Translation in space -> Momentum conservation.
+- Global U(1) symmetry: psi -> e^(i alpha) psi leads to conservation of electric charge.
+- Local gauge invariance: Local U(1) symmetry necessitates the introduction of the photon field A_mu.
+- SU(2)_L x U(1)_Y gauge symmetry for the electroweak interaction.
+- SU(3)_C gauge symmetry for quantum chromodynamics (QCD) describing strong interactions between quarks and gluons.
+
+## Standard Model Particle Content
+- Fermions (Spin-1/2):
+  - Quarks: Up (u, 2.2 MeV), Down (d, 4.7 MeV), Charm (c, 1.28 GeV), Strange (s, 96 MeV), Top (t, 173 GeV), Bottom (b, 4.18 GeV).
+  - Leptons: Electron (e, 0.511 MeV), Muon (mu, 105.7 MeV), Tau (tau, 1776 MeV) and their corresponding neutrinos (nu_e, nu_mu, nu_tau).
+- Gauge Bosons (Spin-1):
+  - Photon (gamma, 0 mass) for EM force.
+  - W^+ (80.38 GeV), W^- (80.38 GeV), and Z^0 (91.19 GeV) for the weak force.
+  - Gluons (g, 8 types, 0 mass) for the strong force.
+- Scalar Boson (Spin-0):
+  - Higgs Boson (H, 125.1 GeV), responsible for generating the masses of fundamental particles.
+
+## Spontaneous Symmetry Breaking
+- The Higgs Mechanism gives mass to the W and Z bosons.
+- Mexican hat potential: V(phi) = mu^2 |phi|^2 + lambda |phi|^4 (where mu^2 < 0, lambda > 0).
+- The vacuum expectation value (VEV) is non-zero: v = sqrt(-mu^2/lambda) ~ 246 GeV.
+- Expansion of the field around the vacuum: phi(x) = (v + h(x))/sqrt(2), where h(x) is the physical Higgs field.
+- Goldstone bosons correspond to flat directions in the potential; they are "eaten" to become the longitudinal polarization states of the W and Z bosons.
+
+## Cross Sections and Decay Rates
+- Fermi's Golden Rule defines transition probabilities between quantum states.
+- Decay rate (Gamma) for a particle of mass M: dGamma = (1/2M) |M|^2 dPhi_n, where |M|^2 is the squared matrix element.
+- Cross-section (sigma) for 2 -> n scattering: dsigma = (1/(4*sqrt((p1.p2)^2 - m1^2 m2^2))) |M|^2 dPhi_n.
+- dPhi_n is the Lorentz-invariant n-body phase space: dPhi_n = prod_i=1^n (d^3p_i/((2pi)^3 2E_i)) (2pi)^4 delta^4(P_initial - P_final).
+- Unitarity of the S-matrix (S^dagger S = I) ensures the conservation of probability.
+- Optical theorem: Cross section is related to the imaginary part of the forward scattering amplitude.
+- Relativistic Breit-Wigner resonance formula for unstable particles: sigma(E) ~ 1/((E^2-M^2)^2 + M^2 Gamma^2).
+- CPT theorem guarantees that particles and antiparticles have identical masses and lifetimes.
+- High-energy asymptotics are governed by the Renormalization Group Equations (RGE).
+- Asymptotic freedom in QCD: The strong coupling constant decreases at high energy scales, allowing perturbative calculations for deep inelastic scattering.
+- Confinement: Quarks and gluons cannot be isolated; they are always bound in color-neutral hadrons (baryons and mesons).
+- Chiral symmetry breaking in QCD generates the majority of the visible mass in the universe (proton/neutron mass).
+- Instanton effects and the strong CP problem lead to the postulation of the axion.
+- Anomalies in QFT occur when a classical symmetry is broken by quantum corrections (e.g., chiral anomaly).
+- The Casimir effect is a macroscopic physical manifestation of the zero-point energy of the quantized electromagnetic field.
+- Ward-Takahashi identities enforce gauge invariance at the quantum level and ensure the transversality of the photon propagator.
+- Schwinger-Dyson equations are the quantum equations of motion, providing infinite hierarchical relations between Green's functions.
+- Lattice QFT formulates field theories on a discretized spacetime grid, enabling non-perturbative calculations (e.g., lattice QCD for hadron spectroscopy).
+- Effective Field Theories (EFT) separate heavy and light degrees of freedom (e.g., Chiral Perturbation Theory, Standard Model Effective Field Theory).
+- The cosmological constant problem arises from the vast discrepancy (~10^120) between the observed dark energy density and the theoretical vacuum energy prediction from QFT.

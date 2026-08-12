@@ -1,0 +1,87 @@
+# Semiconductor Device Physics and Non-Volatile Memory (NVM) Reference
+
+## 1. Classical PN Junctions and MOS Structures
+The fundamental building block of semiconductor devices is the PN junction. In thermal equilibrium, the built-in potential is given by:
+V_bi = (k_B*T/q) * ln(N_A*N_D / n_i^2)
+where k_B is Boltzmann's constant, T is absolute temperature, q is the elementary charge, N_A and N_D are acceptor and donor concentrations, and n_i is the intrinsic carrier concentration (for Si at 300K, n_i ~ 1e10 cm^-3).
+The depletion region width W for a step junction is:
+W = [ (2*epsilon_s / q) * (1/N_A + 1/N_D) * (V_bi - V_A) ]^(1/2)
+where epsilon_s is the semiconductor permittivity (11.7 * epsilon_0 for Si) and V_A is the applied voltage.
+
+### MOS Capacitor
+The Metal-Oxide-Semiconductor structure forms the basis of the MOSFET.
+Oxide capacitance per unit area: C_ox = epsilon_ox / t_ox (for SiO2, epsilon_ox = 3.9 * epsilon_0).
+Threshold voltage V_T is the voltage required to create strong inversion:
+V_T = V_FB + 2*phi_F + sqrt(2*epsilon_s*q*N_A*(2*phi_F)) / C_ox
+where V_FB is the flat-band voltage, and phi_F is the Fermi potential.
+
+### MOSFET Characteristics
+In the long-channel limit, the drain current I_D in the linear region (V_DS < V_GS - V_T) is:
+I_D = (W/L) * mu * C_ox * [ (V_GS - V_T)*V_DS - (V_DS^2)/2 ]
+where W is width, L is length, and mu is the carrier mobility.
+In saturation (V_DS >= V_GS - V_T), pinch-off occurs and current saturates to:
+I_D = (W/L) * (mu * C_ox / 2) * (V_GS - V_T)^2 * (1 + lambda*V_DS)
+where lambda is the channel-length modulation parameter.
+
+## 2. Advanced Charge Transport and Tunneling
+As devices scale, quantum mechanical tunneling becomes significant.
+### Fowler-Nordheim (FN) Tunneling
+Occurs through a triangular potential barrier under high electric fields (E > 10 MV/cm). The current density J is:
+J_FN = A * E^2 * exp(-B / E)
+where A = q^3 / (8*pi*h*Phi_B) and B = (8*pi*sqrt(2*m^*)*Phi_B^(3/2)) / (3*h*q). Phi_B is the barrier height.
+### Direct Tunneling
+For ultra-thin oxides (t_ox < 3 nm), electrons can tunnel directly through the trapezoidal barrier:
+J_DT ~ exp(- (4*pi*t_ox / h) * sqrt(2*m^* * Phi_B))
+This leads to exponential increases in gate leakage current in scaled CMOS.
+
+## 3. Emerging Non-Volatile Memory (NVM) Technologies
+### RRAM (Resistive RAM) / Memristors
+Operates on the principle of reversible formation and rupture of conductive filaments (e.g., oxygen vacancies) in transition metal oxides like HfOx or TaOx.
+- Forming: Initial soft breakdown creating the filament (high voltage).
+- SET: Transition from High Resistance State (HRS, ~1-100 MOhm) to Low Resistance State (LRS, ~1-100 kOhm).
+- RESET: Transition from LRS to HRS.
+The I-V characteristic exhibits a pinched hysteresis loop, defining the memristive behavior described by Leon Chua.
+
+### Phase-Change Memory (PCM)
+Utilizes chalcogenide glasses, most commonly GST (Ge2Sb2Te5).
+- SET (Crystallization): Heating above crystallization temperature but below melting point (~150-300 C for GST). The crystalline phase has low resistance (LRS).
+- RESET (Amorphization): Melt-quenching the material (heating > 600 C followed by rapid cooling > 10^9 K/s). The amorphous phase has high resistance (HRS).
+
+### Ferroelectric Memory (FeRAM / FeFET)
+Relies on spontaneous electric polarization. With the discovery of ferroelectricity in doped HfO2 (e.g., HZO - Hf0.5Zr0.5O2), integration with CMOS has become viable.
+Features a polarization-voltage (P-V) hysteresis loop. The remanent polarization P_r can be 10-30 uC/cm^2. Coercive field E_c is typically 1-2 MV/cm. In a FeFET, this polarization shifts the V_T of the transistor.
+
+### MRAM (Magnetic RAM)
+Based on the Magnetic Tunnel Junction (MTJ), consisting of two ferromagnets separated by a thin oxide barrier (e.g., CoFeB/MgO/CoFeB).
+Tunneling Magnetoresistance (TMR) ratio: TMR = (R_AP - R_P) / R_P * 100%
+where R_AP and R_P are resistances in anti-parallel and parallel magnetic alignments. TMR can exceed 200% at room temperature.
+Spin-Transfer Torque (STT) is used for switching, utilizing a spin-polarized current to transfer angular momentum to the free magnetic layer. Critical switching current density J_c0 ~ alpha * M_s * t_FM / (P * tau_spin).
+
+## 4. Beyond-CMOS Devices
+- Tunnel FET (TFET): Utilizes band-to-band tunneling (BTBT). Can achieve Subthreshold Swing (SS) < 60 mV/dec at room temperature, overcoming the Boltzmann limit of thermionic emission.
+- Negative Capacitance FET (NCFET): Incorporates a ferroelectric capacitor in the gate stack. Operating in the negative capacitance regime (d^2U/dP^2 < 0) provides internal voltage amplification, also enabling SS < 60 mV/dec.
+- SpinFET: Datta-Das transistor utilizing spin-orbit coupling (Rashba effect) in a 2DEG channel to precess the spin of injected electrons, modulating the current measured at a ferromagnetic drain.
+
+## 5. Quantum Confinement and Heterostructures
+When material dimensions approach the de Broglie wavelength (~1-10 nm), quantum confinement occurs.
+- 2D Electron Gas (2DEG): Confinement in 1 dimension. Density of states (DOS) becomes step-like.
+- Quantum Wells (1D confinement), Wires (2D confinement), Dots (3D confinement, 0D system).
+For an infinite potential well of width L, energy levels are: E_n = (n^2 * h^2) / (8 * m^* * L^2).
+Effective band gap increases as size decreases (quantum size effect).
+
+### Heterostructures
+Interfaces between different semiconductors (e.g., GaAs/AlGaAs). Band alignments are predicted by Anderson's electron affinity rule:
+Delta E_c = chi_1 - chi_2
+Delta E_v = (chi_1 + E_g1) - (chi_2 + E_g2)
+Types of alignment:
+- Type I (Straddling): Both electrons and holes confined in the same material (e.g., GaAs/AlGaAs). Ideal for quantum well lasers.
+- Type II (Staggered): Electrons and holes confined in different adjacent materials.
+- Type III (Broken-gap): Conduction band of one material overlaps valence band of the other (e.g., InAs/GaSb).
+
+## 6. Contacts and Interfaces
+Contact resistance degrades device performance.
+Specific contact resistivity: rho_c = dV/dJ at V=0 (Units: Ohm.cm^2). For advanced nodes, rho_c < 1e-8 Ohm.cm^2 is required.
+Measured using the Transmission Line Method (TLM) or Circular TLM (CTLM).
+Total resistance R_tot = 2*R_c + R_sh * (L/W)
+where R_c is contact resistance, R_sh is sheet resistance of the semiconductor, L is contact spacing, W is width.
+Plotting R_tot vs L yields 2*R_c as the y-intercept and transfer length L_T from the x-intercept. rho_c = R_sh * L_T^2.

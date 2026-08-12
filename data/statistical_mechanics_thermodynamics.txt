@@ -1,0 +1,94 @@
+# Statistical Mechanics and Thermodynamics Reference
+
+## 1. Fundamentals of Ensembles
+Statistical mechanics connects microscopic properties to macroscopic thermodynamic observables through probability distributions and ensembles.
+
+### Microcanonical Ensemble (N, V, E fixed)
+Describes an isolated system. The fundamental postulate is equal a priori probability for all accessible microstates.
+Entropy S is defined by the Boltzmann equation:
+S = k_B * ln(Omega)
+where Omega is the number of accessible microstates.
+Temperature T is defined by: 1/T = (partial S / partial E)_(N,V).
+
+### Canonical Ensemble (N, V, T fixed)
+Describes a system in thermal contact with a heat bath. The probability of being in state i with energy E_i is given by the Boltzmann factor:
+P_i = (1/Z) * exp(-E_i / k_B*T) = (1/Z) * exp(-beta * E_i)  [where beta = 1/k_B*T]
+The Canonical Partition Function Z is the sum over all states:
+Z = sum_i exp(-beta * E_i)
+Helmholtz Free Energy F connects to Z:
+F = -k_B * T * ln(Z)
+
+### Grand Canonical Ensemble (mu, V, T fixed)
+Describes a system that can exchange both energy and particles with a reservoir.
+Grand Partition Function Xi:
+Xi = sum_{N,i} exp(-beta * (E_{N,i} - mu*N))
+where mu is the chemical potential.
+Grand Potential (Landau Free Energy) Phi = -k_B * T * ln(Xi) = U - TS - mu*N.
+
+## 2. Quantum Statistics and Distribution Functions
+The average number of particles occupying a single-particle state with energy E depends on the nature of the particles.
+
+### Fermi-Dirac Distribution
+Applies to fermions (half-integer spin, e.g., electrons, protons), which obey the Pauli exclusion principle.
+f(E) = 1 / [ exp((E - mu) / k_B*T) + 1 ]
+At T=0 K, f(E) is a step function; all states up to the Fermi Energy (E_F = mu(T=0)) are filled.
+
+### Bose-Einstein Distribution
+Applies to bosons (integer spin, e.g., photons, phonons). Multiple particles can occupy the same state.
+n(E) = 1 / [ exp((E - mu) / k_B*T) - 1 ]
+Can lead to Bose-Einstein Condensation at low temperatures where a macroscopic number of particles occupy the ground state.
+
+### Maxwell-Boltzmann Distribution
+The classical limit of both FD and BE distributions when (E - mu) >> k_B*T (sparse occupation).
+f(E) ~ exp(-(E - mu) / k_B*T)
+For classical ideal gas, the velocity distribution is:
+f(v) = (m / 2*pi*k_B*T)^(3/2) * 4*pi*v^2 * exp(-m*v^2 / 2*k_B*T)
+
+## 3. Phase Transitions and Critical Phenomena
+Phase transitions involve non-analytic behavior of thermodynamic potentials.
+- First-order phase transitions: Involve a discontinuity in the first derivative of free energy (e.g., entropy or volume). Accompanied by latent heat (L = T * Delta S).
+- Second-order (continuous) phase transitions: Discontinuity in the second derivative (e.g., specific heat, susceptibility). Order parameter goes to zero continuously at critical temperature T_c.
+
+### Landau Theory
+A phenomenological theory expanding free energy in terms of an order parameter 'm' near T_c:
+F(m) = F_0 + a(T-T_c)*m^2 + b*m^4 - h*m
+Predicts critical exponents (e.g., beta=1/2 for magnetization m ~ (T_c-T)^beta).
+
+### Ising Model
+A microscopic model of ferromagnetism.
+Hamiltonian: H = -J * sum_{<i,j>} s_i * s_j - h * sum_i s_i
+where s_i = +1 or -1 (spins), J is the exchange interaction, and <i,j> denotes nearest neighbors.
+- 1D Ising Model: No phase transition at T > 0.
+- 2D Ising Model (Onsager solution): Exhibits a continuous phase transition at k_B*T_c / J = 2 / ln(1+sqrt(2)) ~ 2.269. Exact critical exponents differ from Mean Field Theory.
+- Mean Field Theory approximation: Replaces interactions with an effective mean field. Fails near T_c due to neglecting fluctuations, but conceptually useful.
+
+## 4. Computational Methods
+### Monte Carlo (MC) Simulations
+Used to numerically evaluate integrals over high-dimensional phase space.
+- Metropolis Algorithm: Generates a Markov chain of states with transition probability P(i->j) = min(1, exp(-beta*(E_j - E_i))). Ensures detailed balance.
+- Wang-Landau Sampling: Estimates the density of states g(E) directly by performing a random walk in energy space, modifying a histogram until it is flat. Useful for overcoming free energy barriers.
+- Replica Exchange (Parallel Tempering): Simulates multiple replicas at different temperatures and periodically swaps configurations. Enhances sampling of rough energy landscapes.
+
+## 5. Advanced Concepts
+### Connection between Partition Function and Observables
+Internal Energy U = - partial(ln Z) / partial(beta)
+Specific Heat C_v = partial U / partial T = k_B * beta^2 * ( <E^2> - <E>^2 ) (Relates response function to energy fluctuations).
+Entropy S = k_B * (ln Z + beta*U) = - (partial F / partial T)_V
+
+### Fluctuation-Dissipation Theorem
+Relates the spontaneous microscopic fluctuations of a system in equilibrium to its linear response to external perturbations. For example, Johnson-Nyquist noise in a resistor:
+S_V(f) = 4 * k_B * T * R
+where S_V is the voltage power spectral density and R is resistance.
+
+### Boltzmann Transport Equation (BTE)
+Describes the statistical behavior of a thermodynamic system out of equilibrium.
+partial f / partial t + v * grad_r(f) + F * grad_p(f) = (partial f / partial t)_coll
+where f(r,p,t) is the distribution function, v is velocity, F is external force, and the RHS is the collision integral (often approximated using Relaxation Time Approximation: -(f-f_0)/tau).
+
+### Density of States (DOS) g(E)
+Number of states per unit energy interval. Critical for calculating carrier concentrations.
+For free electron gas:
+- 1D: g_1D(E) ~ E^(-1/2) (exhibits Van Hove singularities at band edges).
+- 2D: g_2D(E) = constant (m^* / (pi * hbar^2)). Step-like.
+- 3D: g_3D(E) = (1 / 2*pi^2) * (2*m^* / hbar^2)^(3/2) * E^(1/2).
+Van Hove singularities occur where the gradient of the dispersion relation E(k) is zero.

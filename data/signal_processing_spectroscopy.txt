@@ -1,0 +1,78 @@
+# Signal Processing and Spectroscopy Techniques Reference
+
+## 1. Mathematical Foundations
+### Fourier Transforms
+The continuous Fourier Transform (FT) translates a signal from the time domain (t) to the frequency domain (omega):
+X(omega) = integral_{-infty}^{+infty} x(t) * exp(-i * omega * t) dt
+Inverse FT: x(t) = (1/2*pi) * integral_{-infty}^{+infty} X(omega) * exp(i * omega * t) d(omega)
+
+### Discrete Fourier Transform (DFT) and FFT
+For sampled signals x[n] of length N:
+X[k] = sum_{n=0}^{N-1} x[n] * exp(-i * 2*pi * k * n / N)
+The Fast Fourier Transform (FFT) algorithm (e.g., Cooley-Tukey) reduces the computational complexity of DFT from O(N^2) to O(N log N).
+
+### Power Spectral Density (PSD)
+PSD characterises the power distribution of a signal across frequencies.
+For a wide-sense stationary random process, the PSD S_xx(f) is the Fourier transform of its autocorrelation function R_xx(tau) (Wiener-Khinchin theorem):
+S_xx(f) = integral_{-infty}^{+infty} R_xx(tau) * exp(-i * 2*pi * f * tau) d(tau)
+Estimated using periodograms: S_xx(f) ~ (1/N) * |X(f)|^2
+
+## 2. Noise Analysis in Physical Measurements
+- White Noise: Flat PSD across all frequencies (e.g., thermal Johnson-Nyquist noise). S_V = 4*k_B*T*R.
+- 1/f Noise (Flicker Noise): PSD proportional to 1/f^alpha (alpha ~ 1). Ubiquitous in electronics, dominant at low frequencies. Caused by trapping/detrapping or resistance fluctuations.
+- Shot Noise: Arises from the discrete quantization of electric charge. S_I = 2*q*I, where q is elementary charge and I is average DC current. Flat spectrum up to very high frequencies.
+
+### Lock-In Amplification
+A technique to extract a known signal from extremely high noise environments.
+Relies on phase-sensitive detection. The input signal (modulated at frequency f_ref) is multiplied by a reference signal at the same frequency:
+V_out = (1/T) * integral_0^T V_in(t) * V_ref(t) dt
+The multiplier output contains a DC component proportional to the signal amplitude and phase difference, while all noise at other frequencies averages to zero (low-pass filtered).
+
+## 3. Structural and Elemental Characterization
+### X-Ray Diffraction (XRD)
+Probes crystal structure by elastic scattering of X-rays. Constructive interference is governed by Bragg's Law:
+2*d * sin(theta) = n * lambda
+where d is interplanar spacing, theta is incidence angle, lambda is X-ray wavelength (e.g., Cu K-alpha = 1.5406 Angstroms).
+Rietveld refinement is a computational technique used to fit entire powder diffraction patterns to crystal models to determine precise atomic positions and phase fractions.
+
+### X-Ray Photoelectron Spectroscopy (XPS)
+Measures elemental composition and chemical states via the photoelectric effect.
+Binding Energy (BE) = E_photon - Kinetic_Energy - Work_Function.
+Chemical shifts in BE (e.g., shifts in C1s or O1s peaks) indicate oxidation states and bonding environments. Survey scans identify elements; high-resolution core-level scans resolve chemical states.
+
+## 4. Optical and Vibrational Spectroscopy
+### Raman Spectroscopy
+Based on inelastic scattering of monochromatic light (laser).
+- Stokes shift: Photon loses energy to create a phonon (vibrational mode). Resulting photon has lower frequency.
+- Anti-Stokes shift: Photon gains energy by absorbing a phonon. Resulting photon has higher frequency.
+Selection rules dictate that Raman active modes require a change in molecular polarizability. Distinct Raman peaks identify specific chemical bonds and crystal symmetries (e.g., G and 2D peaks in graphene).
+
+### UV-Vis Spectroscopy
+Measures optical absorption or transmission in the ultraviolet-visible range.
+Absorption coefficient alpha can be used to determine the optical band gap E_g using a Tauc plot:
+(alpha * h * nu)^(1/n) = A * (h * nu - E_g)
+where h*nu is photon energy, A is a constant. n=1/2 for direct allowed transitions, n=2 for indirect allowed transitions. E_g is found by extrapolating the linear region to the x-axis.
+
+## 5. Electrical Characterization
+### Impedance Spectroscopy (EIS)
+Applies a small AC voltage V(t) = V_0*sin(omega*t) and measures the current I(t) = I_0*sin(omega*t - phi).
+Complex impedance Z(omega) = V/I = |Z| * exp(i*phi) = Z' + i*Z''
+- Nyquist plot: -Z'' (imaginary part) vs Z' (real part) parameterized by frequency.
+Data is fitted to Equivalent Circuit Models (ECMs) comprising resistors (R), capacitors (C), inductors (L), and Constant Phase Elements (CPEs) to extract physical parameters (e.g., bulk resistance, grain boundary capacitance).
+
+### Current-Voltage (I-V) Characterization
+Typically performed using a Source Measure Unit (SMU) like Keithley instruments.
+- Sweep measurements: Ramping voltage and measuring current.
+- Compliance limits MUST be set to prevent device breakdown or thermal runaway (e.g., setting I_compliance = 1 mA during an RRAM forming step).
+Parameters extracted include resistance, leakage current, breakdown voltage, and threshold voltage.
+
+## 6. Microscopy Techniques
+### Electron Microscopy (SEM / TEM)
+- Scanning Electron Microscopy (SEM): Scans a focused electron beam over the surface. Secondary Electrons (SE) give topography; Backscattered Electrons (BSE) give compositional contrast. Resolution ~1-10 nm.
+- Transmission Electron Microscopy (TEM): Beam passes through an ultra-thin sample (<100 nm). Enables atomic resolution (<0.1 nm). Can perform Electron Diffraction (SAED) for crystallography and Electron Energy Loss Spectroscopy (EELS) / Energy-Dispersive X-ray Spectroscopy (EDX) for elemental mapping.
+
+### Atomic Force Microscopy (AFM)
+Uses a sharp probe on a microcantilever to map surface topography.
+- Contact mode: Tip drags across the surface.
+- Tapping mode (AC mode): Cantilever oscillates near resonance; amplitude changes due to tip-sample interactions map topography without damaging soft samples.
+- Force-distance curves measure adhesion, stiffness, and nanoscale mechanical properties.
