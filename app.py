@@ -107,20 +107,21 @@ with st.sidebar:
     st.image("https://img.icons8.com/isometric/100/physics.png", width=70)
     st.title("Settings & Control")
     
-    saved_key = os.getenv("GROQ_API_KEY", os.getenv("GEMINI_API_KEY", os.getenv("ANTHROPIC_API_KEY", "")))
-    api_key_input = st.text_input("AI API Key (Groq / Gemini / Claude)", value=saved_key, type="password", help="Enter Groq API Key (gsk_...), Gemini API Key, or Claude API Key")
+    # Check for pre-configured keys in Streamlit Secrets or Environment
+    has_llm_key = "GROQ_API_KEY" in st.secrets or "GEMINI_API_KEY" in st.secrets or os.getenv("GROQ_API_KEY") or os.getenv("GEMINI_API_KEY")
     
-    if api_key_input and engine:
-        if api_key_input.startswith("gsk_"):
-            os.environ["GROQ_API_KEY"] = api_key_input
-        elif api_key_input.startswith("AIzaSy") or api_key_input.startswith("AQ"):
-            os.environ["GEMINI_API_KEY"] = api_key_input
-        else:
-            os.environ["ANTHROPIC_API_KEY"] = api_key_input
-            
-        if hasattr(engine, 'update_llm'):
-            engine.update_llm(api_key_input)
-        
+    if not has_llm_key:
+        api_key_input = st.text_input("AI API Key (Groq / Gemini / Claude)", type="password")
+        if api_key_input and engine:
+            if api_key_input.startswith("gsk_"):
+                os.environ["GROQ_API_KEY"] = api_key_input
+            elif api_key_input.startswith("AIzaSy") or api_key_input.startswith("AQ"):
+                os.environ["GEMINI_API_KEY"] = api_key_input
+            else:
+                os.environ["ANTHROPIC_API_KEY"] = api_key_input
+            if hasattr(engine, 'update_llm'):
+                engine.update_llm(api_key_input)
+    
     if engine and engine.llm:
         st.success(f"AI Provider Active: {engine.active_provider}")
     else:
@@ -129,14 +130,17 @@ with st.sidebar:
     st.divider()
     
     # Materials Project API Key
-    saved_mp_key = os.getenv("MP_API_KEY", "")
-    mp_key_input = st.text_input("Materials Project API Key (Optional)", value=saved_mp_key, type="password", help="Get a free key at materialsproject.org/api — enables live lattice data in code generation")
-    if mp_key_input and engine:
-        os.environ["MP_API_KEY"] = mp_key_input
-        engine.mp_api_key = mp_key_input
-        st.success("🔗 Materials Project API Connected")
-    elif not mp_key_input:
-        st.caption("💡 Add MP key for live crystallographic data")
+    has_mp_key = "MP_API_KEY" in st.secrets or os.getenv("MP_API_KEY")
+    if has_mp_key:
+        st.success("🔗 Materials Project API Connected (Pre-configured)")
+    else:
+        mp_key_input = st.text_input("Materials Project API Key (Optional)", type="password")
+        if mp_key_input and engine:
+            os.environ["MP_API_KEY"] = mp_key_input
+            engine.mp_api_key = mp_key_input
+            st.success("🔗 Materials Project API Connected")
+        elif not mp_key_input:
+            st.caption("💡 Add MP key for live crystallographic data")
     
     st.divider()
     if engine:
