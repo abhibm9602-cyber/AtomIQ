@@ -111,15 +111,15 @@ class PhysRAGEngine:
         self.llm = None
         self.active_provider = "None"
         
-        # Priority 1: Groq AI (Llama 3.3 70B - 100% Free & Fast)
+        # Priority 1: Groq AI (Qwen 3.6 27B - 100% Free & Fast)
         if groq_key and groq_key.strip():
             try:
                 self.llm = ChatGroq(
-                    model_name="llama-3.3-70b-versatile",
+                    model_name="qwen-3.6-27b",
                     groq_api_key=groq_key.strip(),
                     temperature=0.2
                 )
-                self.active_provider = "Groq Llama 3.3 70B (100% Free)"
+                self.active_provider = "Groq Qwen 3.6 27B (100% Free)"
                 return
             except Exception as e:
                 print(f"[PhysRAG Warning] Failed with Groq: {e}")
