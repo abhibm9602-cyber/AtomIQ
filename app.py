@@ -108,7 +108,12 @@ with st.sidebar:
     st.title("Settings & Control")
     
     # Check for pre-configured keys in Streamlit Secrets or Environment
-    has_llm_key = "GROQ_API_KEY" in st.secrets or "GEMINI_API_KEY" in st.secrets or os.getenv("GROQ_API_KEY") or os.getenv("GEMINI_API_KEY")
+    has_llm_key = bool(os.getenv("GROQ_API_KEY") or os.getenv("GEMINI_API_KEY"))
+    if not has_llm_key:
+        try:
+            has_llm_key = "GROQ_API_KEY" in st.secrets or "GEMINI_API_KEY" in st.secrets
+        except Exception:
+            pass
     
     if not has_llm_key:
         api_key_input = st.text_input("AI API Key (Groq / Gemini / Claude)", type="password")
@@ -130,7 +135,12 @@ with st.sidebar:
     st.divider()
     
     # Materials Project API Key
-    has_mp_key = "MP_API_KEY" in st.secrets or os.getenv("MP_API_KEY")
+    has_mp_key = bool(os.getenv("MP_API_KEY"))
+    if not has_mp_key:
+        try:
+            has_mp_key = "MP_API_KEY" in st.secrets
+        except Exception:
+            pass
     if has_mp_key:
         st.success("🔗 Materials Project API Connected (Pre-configured)")
     else:
