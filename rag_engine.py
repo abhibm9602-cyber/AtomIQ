@@ -30,7 +30,7 @@ from langchain_core.output_parsers import StrOutputParser
 # Load environment variables (.env)
 load_dotenv(override=True)
 
-class PhysRAGEngine:
+class AtomIQEngine:
     """
     RAG & Agentic Engine for Solid-State Physics, DFT Simulations, 
     Precision Metrology, Neuromorphic Computing, and Quantum Information Theory.
@@ -57,7 +57,7 @@ class PhysRAGEngine:
         self.mp_api_key: Optional[str] = os.getenv("MP_API_KEY")
         
         # Initialize light local embedding model (no API key needed for vectorization!)
-        print("[PhysRAG] Initializing HuggingFace Embeddings (all-MiniLM-L6-v2)...")
+        print("[AtomIQ] Initializing HuggingFace Embeddings (all-MiniLM-L6-v2)...")
         self.embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
         
         # Load and Index Documents (with smart reindexing)
@@ -122,7 +122,7 @@ class PhysRAGEngine:
                 self.active_provider = "Groq GPT-OSS 120B (Free)"
                 return
             except Exception as e:
-                print(f"[PhysRAG Warning] Failed with Groq: {e}")
+                print(f"[AtomIQ Warning] Failed with Groq: {e}")
 
         # Priority 2: Google Gemini
         if gemini_key and gemini_key.strip():
@@ -136,7 +136,7 @@ class PhysRAGEngine:
                     self.active_provider = f"Google Gemini ({model_name})"
                     return
                 except Exception as e:
-                    print(f"[PhysRAG Warning] Failed with Gemini {model_name}: {e}")
+                    print(f"[AtomIQ Warning] Failed with Gemini {model_name}: {e}")
                     
         # Priority 3: Anthropic Claude 3.5
         if anthropic_key and anthropic_key.strip():
@@ -149,7 +149,7 @@ class PhysRAGEngine:
                 self.active_provider = "Claude 3.5 Sonnet"
                 return
             except Exception as e:
-                print(f"[PhysRAG Warning] Failed to initialize Anthropic LLM: {e}")
+                print(f"[AtomIQ Warning] Failed to initialize Anthropic LLM: {e}")
 
     def _build_or_load_vectorstore(self) -> Chroma:
         """Loads documents and creates/updates Chroma vector DB with smart reindexing."""
@@ -167,7 +167,7 @@ class PhysRAGEngine:
         
         # If vectorstore exists and no new files, just load it
         if not new_or_modified and os.path.exists(self.persist_dir):
-            print(f"[PhysRAG] All {len(all_files)} files already indexed. Loading existing ChromaDB...")
+            print(f"[AtomIQ] All {len(all_files)} files already indexed. Loading existing ChromaDB...")
             vs = Chroma(embedding_function=self.embeddings, persist_directory=self.persist_dir)
             try:
                 self.total_chunks = vs._collection.count()
@@ -187,14 +187,14 @@ class PhysRAGEngine:
                     continue
                 documents.extend(loader.load())
             except Exception as e:
-                print(f"[PhysRAG Warning] Failed to load {filepath}: {e}")
+                print(f"[AtomIQ Warning] Failed to load {filepath}: {e}")
             
         if not documents:
-            print(f"[PhysRAG] No documents found in {self.data_dir}. System running with empty memory.")
+            print(f"[AtomIQ] No documents found in {self.data_dir}. System running with empty memory.")
             return Chroma(embedding_function=self.embeddings, persist_directory=self.persist_dir)
             
-        print(f"[PhysRAG] Found {len(documents)} document pages from {len(all_files)} files.")
-        print(f"[PhysRAG] New/modified files: {len(new_or_modified)}")
+        print(f"[AtomIQ] Found {len(documents)} document pages from {len(all_files)} files.")
+        print(f"[AtomIQ] New/modified files: {len(new_or_modified)}")
         
         # Optimized chunking: 800 chars with 200 overlap for better context
         text_splitter = RecursiveCharacterTextSplitter(
@@ -205,7 +205,7 @@ class PhysRAGEngine:
         chunks = text_splitter.split_documents(documents)
         self.total_chunks = len(chunks)
         
-        print(f"[PhysRAG] Indexing {len(chunks)} chunks into ChromaDB...")
+        print(f"[AtomIQ] Indexing {len(chunks)} chunks into ChromaDB...")
         vectorstore = Chroma.from_documents(
             documents=chunks,
             embedding=self.embeddings,
@@ -214,7 +214,7 @@ class PhysRAGEngine:
         
         # Save index tracker
         self._save_indexed_files(current_hashes)
-        print(f"[PhysRAG] Indexing complete! {len(chunks)} chunks from {len(all_files)} files.")
+        print(f"[AtomIQ] Indexing complete! {len(chunks)} chunks from {len(all_files)} files.")
         
         return vectorstore
 
@@ -258,14 +258,14 @@ class PhysRAGEngine:
             }
             
         system_template = """
-        You are PhysRAG, an expert AI assistant specializing in:
+        You are AtomIQ, an expert AI assistant specializing in:
         - Solid-State Physics & Condensed Matter Theory
         - Quantum Density Functional Theory (DFT) using Quantum Espresso, VASP, and Quantum ATK
         - ITO/Al2O3/Au Memristor Devices & Neuromorphic Computing Hardware
         - Space-borne Atomic Frequency Standards & Precision Metrology
         - Quantum Information Theory, Quantum Computing, and Quantum Error Correction
         
-        Use the following retrieved context chunks from the PhysRAG knowledge base to answer the user's query accurately and rigorously.
+        Use the following retrieved context chunks from the AtomIQ knowledge base to answer the user's query accurately and rigorously.
         Always cite specific parameters, equations, and numerical values from the context when available.
         If the context does not fully answer the question, supplement with your physics knowledge but clearly indicate which parts come from the knowledge base vs. your general knowledge.
         
@@ -373,10 +373,10 @@ class PhysRAGEngine:
                 return mp_text
                 
         except ImportError:
-            print("[PhysRAG] mp-api not installed. Skipping Materials Project lookup.")
+            print("[AtomIQ] mp-api not installed. Skipping Materials Project lookup.")
             return None
         except Exception as e:
-            print(f"[PhysRAG] Materials Project API error: {e}")
+            print(f"[AtomIQ] Materials Project API error: {e}")
             return None
 
     def generate_dft_or_code_script(self, target_type: str, parameters: str) -> Dict[str, Any]:
@@ -519,11 +519,11 @@ REFINED CODE:
 
 # Standalone test runner
 if __name__ == "__main__":
-    engine = PhysRAGEngine()
-    print(f"\n[PhysRAG] Knowledge Base Stats: {engine.get_kb_stats()}")
+    engine = AtomIQEngine()
+    print(f"\n[AtomIQ] Knowledge Base Stats: {engine.get_kb_stats()}")
     
     res = engine.query_rag("How does the Al2O3 barrier switch in memristors?")
-    print("\n[PhysRAG Test Result]: Successfully initialized and queried ChromaDB vector database!")
+    print("\n[AtomIQ Test Result]: Successfully initialized and queried ChromaDB vector database!")
     print("Active Provider:", engine.active_provider)
     print("Retrieved Chunks Count:", len(res["retrieved_chunks"]))
     print(f"Retrieval Time: {res['retrieval_time']:.3f}s")

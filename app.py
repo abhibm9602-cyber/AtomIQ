@@ -10,14 +10,14 @@ import streamlit as st
 import os
 import tempfile
 from dotenv import load_dotenv
-from rag_engine import PhysRAGEngine
+from rag_engine import AtomIQEngine
 
 # Load env variables
 load_dotenv(override=True)
 
 # Page Configuration
 st.set_page_config(
-    page_title="PhysRAG-Materials | AI Agent for Physics & DFT",
+    page_title="AtomIQ | AI Agent for Physics & DFT",
     page_icon="⚛️",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -73,7 +73,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Application Header
-st.markdown('<p class="main-header">⚛️ PhysRAG-Materials</p>', unsafe_allow_html=True)
+st.markdown('<p class="main-header">⚛️ AtomIQ</p>', unsafe_allow_html=True)
 st.markdown('<p class="sub-header">Autonomous RAG & Agentic Workflow for Solid-State Electronics, Memristors, Metrology & Quantum Information</p>', unsafe_allow_html=True)
 
 st.markdown("""
@@ -90,12 +90,12 @@ st.write("")
 # Initialize RAG Engine in Session State (Cached)
 @st.cache_resource
 def get_rag_engine():
-    return PhysRAGEngine()
+    return AtomIQEngine()
 
 try:
     engine = get_rag_engine()
 except Exception as e:
-    st.error(f"Failed to initialize PhysRAG Engine: {e}")
+    st.error(f"Failed to initialize AtomIQ Engine: {e}")
     engine = None
 
 # Initialize chat history
@@ -175,7 +175,7 @@ with st.sidebar:
     - Streamlit Cloud Interface
     """)
     st.divider()
-    st.markdown("[⭐ GitHub Repository](https://github.com/abhibm9602-cyber/Physrag-materials)")
+    st.markdown("[⭐ GitHub Repository](https://github.com/abhibm9602-cyber/AtomIQ)")
 
 # Main Tabbed Interface
 tab1, tab2, tab3, tab4 = st.tabs(["🔍 Literature RAG Search", "⚡ DFT & Code Generator", "📤 Upload Documents", "📖 Knowledge Base Index"])

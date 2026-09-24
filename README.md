@@ -1,4 +1,4 @@
-# ⚛️ PhysRAG-Materials
+# ⚛️ AtomIQ
 > **Autonomous RAG & Agentic Workflow for Solid-State Electronics, Memristive Heterostructures, & Precision Metrology**
 
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat&logo=python&logoColor=white)](https://www.python.org/)
@@ -11,7 +11,7 @@ Developed by **Abhijith Krishnan B M** (B.S.-M.S. Dual Degree in Solid State Phy
 ---
 
 ## 📸 Overview
-`PhysRAG-Materials` bridges **solid-state physics domain expertise** with modern **Generative AI architectures**. It allows researchers to:
+`AtomIQ` bridges **solid-state physics domain expertise** with modern **Generative AI architectures**. It allows researchers to:
 1. **Search & Synthesize** complex research papers on oxide heterostructures ($ITO/Al_2O_3/Au$), tunneling barriers, dynamic filamentary switching, and atomic clock frequency metrology (Allan variance, phase noise).
 2. **Auto-Generate Production Code** for Density Functional Theory (DFT Quantum Espresso `.in` files) and Python time-series metrology signal analysis.
 
@@ -43,8 +43,8 @@ flowchart TD
 
 ### 1. Clone & Set Up Environment
 ```bash
-git clone https://github.com/abhibm9602-cyber/physrag-materials.git
-cd physrag-materials
+git clone https://github.com/abhibm9602-cyber/AtomIQ.git
+cd AtomIQ
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
@@ -66,7 +66,7 @@ Open `http://localhost:8501` in your browser.
 
 ## 📄 Repository Structure
 ```
-physrag-materials/
+AtomIQ/
 ├── app.py                      # Streamlit Interactive Web Interface
 ├── rag_engine.py               # Core LangChain + ChromaDB + Claude RAG Engine
 ├── requirements.txt            # Python Dependencies
