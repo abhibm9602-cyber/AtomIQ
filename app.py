@@ -15,6 +15,19 @@ from rag_engine import AtomIQEngine
 # Load env variables
 load_dotenv(override=True)
 
+# Copy Streamlit secrets to os.environ for cloud deployment
+try:
+    if "GROQ_API_KEY" in st.secrets:
+        os.environ["GROQ_API_KEY"] = st.secrets["GROQ_API_KEY"]
+    if "ANTHROPIC_API_KEY" in st.secrets:
+        os.environ["ANTHROPIC_API_KEY"] = st.secrets["ANTHROPIC_API_KEY"]
+    if "GEMINI_API_KEY" in st.secrets:
+        os.environ["GEMINI_API_KEY"] = st.secrets["GEMINI_API_KEY"]
+    if "MP_API_KEY" in st.secrets:
+        os.environ["MP_API_KEY"] = st.secrets["MP_API_KEY"]
+except Exception:
+    pass
+
 # Page Configuration
 st.set_page_config(
     page_title="AtomIQ | AI Agent for Physics & DFT",
