@@ -112,17 +112,17 @@ Quantum circuit construction and simulation using IBM Qiskit and Google Cirq fra
 | **Qiskit — Bell State Preparation & Measurement** | EPR pair creation and Bell basis measurement for entanglement verification |
 | **Cirq — Quantum Circuit Simulation** | Google Cirq-based circuit construction and state vector simulation |
 
-### 🧠 5. Machine Learning for Materials (5 scripts)
+### 🧠 5. Machine Learning for Molecules (5 scripts)
 
-AI/ML pipelines for materials property prediction and high-throughput screening.
+AI/ML pipelines for molecular property prediction and high-throughput screening.
 
 | Script | Description |
 |---|---|
-| **Python — Crystal Graph Neural Network (CGCNN)** | Graph neural network for predicting material properties from crystal structure |
-| **Python — Band Gap Prediction (Random Forest)** | Supervised ML model for electronic band gap prediction from compositional features |
-| **Python — Formation Energy Prediction** | Regression model for thermodynamic stability assessment |
-| **Python — Materials Project API Data Fetch** | Automated bulk data retrieval from the Materials Project database via `mp-api` |
-| **Python — SOAP Descriptor Calculation** | Smooth Overlap of Atomic Positions — atomic environment descriptor for ML potentials |
+| **Python — Molecular Graph Neural Network (MPNN)** | Graph neural network for predicting molecular properties from chemical structure |
+| **Python — HOMO-LUMO Gap Prediction (Random Forest)** | Supervised ML model for electronic gap prediction from molecular features |
+| **Python — Molecular Binding Energy Prediction** | Regression model for thermodynamic stability assessment |
+| **Python — PubChem API Data Fetch** | Automated bulk data retrieval from the PubChem database via API |
+| **Python — SMILES to RDKit Descriptor Calculation** | Molecular environment descriptor generation for ML potentials |
 
 ### 📐 6. Statistical Mechanics (5 scripts)
 

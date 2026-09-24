@@ -281,7 +281,7 @@ with tab2:
             "🧪 Molecular Dynamics",
             "📊 Data Analysis & Metrology",
             "💻 Quantum Computing",
-            "🧠 Machine Learning for Materials",
+            "🧠 Machine Learning for Molecules",
             "📐 Statistical Mechanics"
         ])
     
@@ -317,12 +317,12 @@ with tab2:
             "Qiskit — Bell State Preparation & Measurement",
             "Cirq — Quantum Circuit Simulation"
         ],
-        "🧠 Machine Learning for Materials": [
-            "Python — Crystal Graph Neural Network (CGCNN)",
-            "Python — Band Gap Prediction (Random Forest)",
-            "Python — Formation Energy Prediction",
-            "Python — Materials Project API Data Fetch",
-            "Python — SOAP Descriptor Calculation"
+        "🧠 Machine Learning for Molecules": [
+            "Python — Molecular Graph Neural Network (MPNN)",
+            "Python — HOMO-LUMO Gap Prediction (Random Forest)",
+            "Python — Molecular Binding Energy Prediction",
+            "Python — PubChem API Data Fetch",
+            "Python — SMILES to RDKit Descriptor Calculation"
         ],
         "📐 Statistical Mechanics": [
             "Python — 2D Ising Model (Monte Carlo)",
