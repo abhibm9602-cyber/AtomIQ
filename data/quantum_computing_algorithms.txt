@@ -1,0 +1,169 @@
+# AtomIQ Knowledge Base: Quantum Computing Algorithms for Materials Physics
+
+This document provides a highly technical overview of advanced quantum algorithms for chemistry and materials physics, focusing on implementations using Qiskit and PennyLane. It serves as a dense, reference-manual style guide for AtomIQ's RAG engine, emphasizing accurate parameters, mathematical formalisms, and exact API usages.
+
+## 1. Qiskit: Quantum Phase Estimation (QPE)
+
+Quantum Phase Estimation (QPE) is a fundamental quantum algorithm used to estimate the phase $\theta$ of an eigenvalue $e^{2\pi i \theta}$ of a unitary operator $U$. In quantum chemistry and materials science, it is extensively used for exact ground state energy estimation, assuming an ansatz closely overlapping with the true eigenstate is prepared.
+
+### Circuit Structure
+The QPE circuit consists of two distinct registers:
+1. **Evaluation Register**: $n$ auxiliary qubits initialized to the $|0\rangle^{\otimes n}$ state. The precision of the phase estimation scales exponentially with $n$.
+2. **State Register**: $m$ qubits initialized to an eigenstate $|\psi\rangle$ of the operator $U$.
+
+**Algorithm Steps:**
+- Apply a layer of Hadamard gates ($H^{\otimes n}$) to the evaluation register to create a uniform superposition of all computational basis states.
+- Apply a sequence of controlled unitary operations (C-$U^{2^j}$) from the $j$-th evaluation qubit to the state register. In physics simulations, the time evolution operator is typically $U = e^{-iHt}$, which requires the `HamiltonianGate` in Qiskit.
+- Apply the inverse Quantum Fourier Transform (iQFT) to the evaluation register to resolve the phase bits.
+- Measure the evaluation register in the computational basis to obtain an $n$-bit approximation of the phase $\theta$.
+
+### Qiskit Implementation
+Qiskit provides the `PhaseEstimation` class in the `qiskit.circuit.library` module.
+
+```python
+from qiskit.circuit.library import PhaseEstimation, QFT
+from qiskit.quantum_info import Pauli
+from qiskit.circuit.library import HamiltonianGate
+
+# Example: Time evolution of a single Pauli-Z operator
+hamiltonian = Pauli('Z')
+evolution_time = 1.0 # t parameter in exp(-iHt)
+unitary = HamiltonianGate(hamiltonian, evolution_time)
+
+# Instantiate QPE
+num_evaluation_qubits = 3
+qpe_circuit = PhaseEstimation(
+    num_evaluation_qubits=num_evaluation_qubits,
+    unitary=unitary,
+    iqft=QFT(num_evaluation_qubits, inverse=True, do_swaps=False)
+)
+```
+
+## 2. Qiskit: Quantum Machine Learning (QML)
+
+Quantum Machine Learning leverages parameterized quantum circuits as trainable machine learning models. The Variational Quantum Classifier (VQC) is a core algorithm for classification tasks in materials discovery, such as predicting crystal structures or classifying phase transitions.
+
+### Architecture
+A VQC consists of:
+1. **Feature Map**: Encodes classical continuous data into a high-dimensional quantum state space. The `ZZFeatureMap` is commonly used for its robust entanglement capabilities, creating quantum feature spaces that are conjectured to be difficult to simulate classically.
+2. **Ansatz (Parameterized Quantum Circuit)**: A trainable heuristic circuit. Common choices include hardware-efficient ansatzes like `RealAmplitudes` (uses $R_y$ and CX gates) and `EfficientSU2` (uses $R_y$, $R_z$, and CX gates).
+3. **Measurement & Classical Optimization**: The circuit expectation values are measured, and classical optimizers (e.g., COBYLA, SPSA) iteratively update the ansatz parameters to minimize a specified loss function. SPSA (Simultaneous Perturbation Stochastic Approximation) is highly preferred for noisy quantum hardware as it approximates the gradient with only two circuit evaluations.
+
+### Qiskit Implementation
+The `qiskit_machine_learning.algorithms.VQC` module encapsulates this workflow.
+
+```python
+from qiskit.circuit.library import ZZFeatureMap, EfficientSU2
+from qiskit_machine_learning.algorithms import VQC
+from qiskit_algorithms.optimizers import COBYLA, SPSA
+
+num_features = 4
+# Linear entanglement creates a ladder of CX gates
+feature_map = ZZFeatureMap(feature_dimension=num_features, reps=2, entanglement='linear')
+# Full entanglement connects all pairs of qubits
+ansatz = EfficientSU2(num_qubits=num_features, reps=3, entanglement='full')
+
+# Using SPSA for gradient-free optimization suitable for noisy real-hardware environments
+optimizer = SPSA(maxiter=100)
+
+vqc = VQC(
+    feature_map=feature_map,
+    ansatz=ansatz,
+    optimizer=optimizer,
+    loss='cross_entropy'
+)
+# Model training: vqc.fit(X_train, y_train)
+```
+
+## 3. Qiskit: Hamiltonian Simulation (Trotter-Suzuki)
+
+Simulating the continuous time evolution $e^{-iHt}$ of a quantum system is critical for extracting dynamic properties of materials. Because exact exponentiation of a large many-body Hamiltonian $H = \sum_{k} h_k P_k$ (where $P_k$ are Pauli strings) is computationally intractable, approximation methods are rigorously required.
+
+### Suzuki-Trotter Expansion
+The Trotter-Suzuki product formula approximates the exponential of a sum of non-commuting operators $A$ and $B$:
+$$ e^{-i(A+B)t} \approx \left( e^{-iAt/n} e^{-iBt/n} \right)^n $$
+For higher-order approximations, more complex symmetric formulations are constructed to reduce the algorithmic Trotter error, which typically scales as $\mathcal{O}(t^2/n)$ for the first-order expansion.
+
+### Qiskit Implementation
+Historically, Qiskit's Opflow module provided classes like `PauliTrotterEvolution`. In the modern Primitives API, this logic is handled via specialized circuit synthesis routines (e.g., `LieTrotter`) or specific algorithm implementations like `TrotterQRTE` (Quantum Real Time Evolution).
+
+```python
+from qiskit.quantum_info import SparsePauliOp
+from qiskit.synthesis import LieTrotter
+from qiskit.circuit.library import PauliEvolutionGate
+
+# Define a 3-qubit Heisenberg interaction Hamiltonian
+hamiltonian = SparsePauliOp.from_list([("XXI", 1.0), ("IXX", 1.0), ("YYI", 1.0), ("IYY", 1.0)])
+evolution_time = 0.5
+
+# Define the evolution gate block
+evo_gate = PauliEvolutionGate(hamiltonian, time=evolution_time)
+
+# Synthesize the circuit using first-order Lie-Trotter with 4 discrete Trotter steps
+trotter_synth = LieTrotter(reps=4)
+evolution_circuit = trotter_synth.synthesize(evo_gate)
+```
+
+## 4. PennyLane: Quantum Neural Networks & Chemistry
+
+PennyLane is a cross-platform Python library dedicated to differentiable programming of quantum computers, making it an optimal choice for Quantum Neural Networks (QNNs) and Variational Quantum Eigensolver (VQE) frameworks in quantum chemistry.
+
+### PennyLane Architecture
+The core computational unit in PennyLane is the `QNode`, which mathematically encapsulates a quantum circuit and structurally binds it to a classical device or simulator backend. QNodes are instantiated using the `@qml.qnode` decorator and natively support exact automatic differentiation via backpropagation (on statevector simulators) or hardware-compatible parameter-shift rules.
+
+### Quantum Chemistry (`qml.qchem`)
+The `qml.qchem` module enables the direct and efficient construction of molecular Hamiltonians natively from chemical specifications such as SMILES strings or XYZ geometry coordinates (`qml.qchem.molecular_hamiltonian`).
+
+```python
+import pennylane as qml
+from pennylane import numpy as np
+
+# Building a 2-qubit molecular Hamiltonian for the H2 molecule in a minimal basis
+symbols = ["H", "H"]
+coordinates = np.array([0.0, 0.0, -0.6614, 0.0, 0.0, 0.6614])
+H, qubits = qml.qchem.molecular_hamiltonian(symbols, coordinates)
+```
+
+### Variational Quantum Eigensolver (VQE)
+In VQE, the algorithmic objective is to find the ground state energy by variationally minimizing the expectation value $\langle \psi(\theta) | H | \psi(\theta) \rangle$. PennyLane exposes `qml.expval` (replacing the deprecated `qml.ExpvalCost`) to explicitly return this measurement from the QNode.
+
+```python
+dev = qml.device("default.qubit", wires=qubits)
+
+@qml.qnode(dev)
+def cost_function(params):
+    # Hardware-efficient ansatz template
+    qml.BasicEntanglerLayers(weights=params, wires=range(qubits))
+    return qml.expval(H) 
+
+# Optimize the circuit parameters using standard Gradient Descent
+opt = qml.GradientDescentOptimizer(stepsize=0.4)
+# params = opt.step(cost_function, params)
+```
+
+### Quantum Neural Networks (QNNs)
+PennyLane is designed to seamlessly integrate with classical deep learning frameworks like PyTorch and Keras. An arbitrary QNode can be effortlessly converted into an auto-differentiable PyTorch neural network layer using the `qml.qnn.TorchLayer` module.
+
+```python
+import torch
+
+@qml.qnode(dev)
+def qnode(inputs, weights):
+    # Encode classical inputs into quantum phases
+    qml.AngleEmbedding(inputs, wires=range(qubits))
+    # Apply parameterized entangling layers
+    qml.BasicEntanglerLayers(weights, wires=range(qubits))
+    # Return independent Pauli-Z expectations
+    return [qml.expval(qml.PauliZ(wires=i)) for i in range(qubits)]
+
+weight_shapes = {"weights": (3, qubits)}
+# Convert the bound QNode to an opaque PyTorch Layer
+qlayer = qml.qnn.TorchLayer(qnode, weight_shapes)
+
+# Integrate the quantum layer into a larger sequential classical PyTorch model
+model = torch.nn.Sequential(
+    torch.nn.Linear(2, qubits),
+    qlayer,
+    torch.nn.Linear(qubits, 1)
+)
+```

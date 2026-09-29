@@ -1,0 +1,251 @@
+# AtomIQ Knowledge Base: Automated Workflows for Computational Materials Science
+# Domain: Computational Physics, Materials Science
+# Core Frameworks: AiiDA, ASE, pymatgen, Bash/QE
+
+## 1. AiiDA (Automated Interactive Infrastructure and Database for Computational Science)
+
+AiiDA is a workflow management system tailored for computational science, enforcing strict provenance tracking to ensure reproducibility.
+
+### 1.1 Core Concepts and Provenance Graph
+AiiDA represents data and calculations as an directed acyclic provenance graph consisting of `Node` objects:
+*   `Data` Nodes: Represent inputs and outputs (e.g., `StructureData`, `Dict`, `KpointsData`, `UpfData`).
+*   `Calculation` Nodes: Represent the execution of an external code (e.g., `CalcJob`).
+*   `Code` Nodes: Represent executable binaries configured on a computer (e.g., `pw.x` configured as `qe-7.2-pw@localhost`).
+*   `WorkChain`: High-level Python classes defining complex, multi-step automated workflows with logic (if, while) and error recovery.
+
+### 1.2 Setup and Daemon Management
+AiiDA utilizes a PostgreSQL database and RabbitMQ message broker.
+*   Profile initialization: `verdi quicksetup`
+*   Status check: `verdi status`
+*   Workflow daemon control: `verdi daemon start` (starts the background workers), `verdi daemon stop`.
+
+### 1.3 `aiida-quantumespresso` Plugin Integration
+The Quantum ESPRESSO plugin provides specialized nodes and workflows.
+*   `PwCalculation`: The fundamental `CalcJob` for running `pw.x`.
+*   `PwBaseWorkChain`: Wraps `PwCalculation` with automatic error handling (e.g., restarting after a walltime error).
+*   `PwBandsWorkChain`: A fully automated workflow executing an SCF calculation followed by a non-SCF bands calculation.
+
+### 1.4 WorkChain Syntax and Input Structure
+Inputs to AiiDA WorkChains are strictly validated and passed as nested dictionaries of AiiDA `Data` nodes.
+
+```python
+from aiida.engine import submit
+from aiida.plugins import WorkflowFactory, DataFactory
+from aiida.orm import load_code, Dict
+
+PwBandsWorkChain = WorkflowFactory('quantumespresso.pw.bands')
+StructureData = DataFactory('core.structure')
+KpointsData = DataFactory('core.array.kpoints')
+
+# Structure definition (Silicon)
+structure = StructureData(cell=[[0., 2.715, 2.715], [2.715, 0., 2.715], [2.715, 2.715, 0.]])
+structure.append_atom(position=(0., 0., 0.), symbols='Si')
+structure.append_atom(position=(1.3575, 1.3575, 1.3575), symbols='Si')
+
+# K-points
+kpoints = KpointsData()
+kpoints.set_kpoints_mesh([4, 4, 4])
+
+# Construct nested input dictionary
+inputs = {
+    'code': load_code('qe-7.2-pw@localhost'),
+    'structure': structure,
+    'scf': {
+        'kpoints': kpoints,
+        'parameters': Dict(dict={
+            'CONTROL': {'calculation': 'scf'},
+            'SYSTEM': {'ecutwfc': 40.0, 'ecutrho': 160.0},
+        }),
+    },
+    'bands': {
+        'parameters': Dict(dict={'CONTROL': {'calculation': 'bands'}}),
+    }
+}
+# UpfData for pseudopotentials must also be supplied in inputs['pseudos']
+# node = submit(PwBandsWorkChain, **inputs)
+```
+
+## 2. ASE (Atomic Simulation Environment) Workflows
+
+ASE provides a lightweight, flexible Python toolkit for setting up, running, and analyzing atomistic simulations, acting as a frontend to numerous calculators.
+
+### 2.1 Equation of State (EOS) Workflows
+EOS workflows scale the lattice parameter of a structure, calculate the energy at each volume, and fit the result to an analytical equation to extract the equilibrium volume, bulk modulus ($B$), and pressure derivative ($B'$).
+
+```python
+from ase.build import bulk
+from ase.calculators.emt import EMT
+from ase.eos import EquationOfState
+from ase.io import Trajectory
+import numpy as np
+
+atoms = bulk('Cu', 'fcc', a=3.6)
+atoms.calc = EMT()
+
+traj = Trajectory('cu_eos.traj', 'w')
+volumes, energies = [], []
+
+for x in np.linspace(0.95, 1.05, 11):
+    scaled_atoms = atoms.copy()
+    scaled_atoms.calc = EMT()
+    scaled_atoms.set_cell(atoms.cell * x, scale_atoms=True)
+    energy = scaled_atoms.get_potential_energy()
+    volumes.append(scaled_atoms.get_volume())
+    energies.append(energy)
+    traj.write(scaled_atoms)
+
+# Fit to Birch-Murnaghan or Vinet EOS
+eos = EquationOfState(volumes, energies, eos='vinet')
+v0, e0, B = eos.fit()
+eos.plot('cu_eos_plot.png')
+```
+
+### 2.2 Structural Optimization
+ASE implements several optimization algorithms for relaxing atomic positions and unit cell vectors.
+*   `ase.optimize.BFGS`: Standard Broyden–Fletcher–Goldfarb–Shanno algorithm for internal coordinates.
+*   `ase.optimize.LBFGS`: Limited-memory version, suitable for large systems.
+*   `ase.optimize.FIRE`: Fast Inertial Relaxation Engine, robust for saddle points and highly distorted structures.
+
+```python
+from ase.optimize import LBFGS
+from ase.constraints import StrainFilter
+# To relax volume: sf = StrainFilter(atoms); opt = LBFGS(sf); opt.run(fmax=0.01)
+opt = LBFGS(atoms, trajectory='relax.traj')
+opt.run(fmax=0.05) # Force tolerance in eV/A
+```
+
+### 2.3 High-Throughput Looping and Surface Generation
+ASE simplifies programmatic generation of numerous structural permutations, such as testing adsorbate binding across multiple metal surfaces.
+
+```python
+from ase.build import fcc111
+elements = ['Pt', 'Pd', 'Ni', 'Cu']
+for el in elements:
+    # Generate 4-layer 3x3 (111) surface slabs with 15A vacuum
+    slab = fcc111(el, size=(3, 3, 4), vacuum=15.0)
+    # Assign calculator, run optimization, extract adsorption energy...
+```
+
+## 3. Bash Pipeline Orchestration for Quantum ESPRESSO
+
+For tightly coupled High-Performance Computing (HPC) environments where heavy workflow managers like AiiDA are unnecessary, bash scripting provides robust pipeline orchestration.
+
+### 3.1 Heredoc Generation and Variables
+Heredocs (`<<EOF`) allow dynamic generation of Fortran namelist input files for QE within bash loops, evaluating shell variables inline.
+
+```bash
+#!/bin/bash
+PREFIX="silicon"
+PSEUDO_DIR="/path/to/pseudos"
+OUTDIR="./tmp"
+ECUT=50
+KPOINTS=8
+
+# Generate SCF input dynamically
+cat > scf.in <<EOF
+&CONTROL
+  calculation = 'scf'
+  prefix = '${PREFIX}'
+  pseudo_dir = '${PSEUDO_DIR}'
+  outdir = '${OUTDIR}'
+/
+&SYSTEM
+  ibrav = 2, celldm(1) = 10.26
+  nat = 2, ntyp = 1
+  ecutwfc = ${ECUT}
+/
+&ELECTRONS
+/
+ATOMIC_SPECIES
+  Si 28.0855 Si.pbe-n-rrkjus_psl.1.0.0.UPF
+ATOMIC_POSITIONS (alat)
+  Si 0.00 0.00 0.00
+  Si 0.25 0.25 0.25
+K_POINTS (automatic)
+  ${KPOINTS} ${KPOINTS} ${KPOINTS} 0 0 0
+EOF
+```
+
+### 3.2 Execution, Error Checking, and Parsing
+Rigorous exit code checking prevents cascading failures in multi-step pipelines (e.g., SCF $\rightarrow$ Bands).
+
+```bash
+# 1. Run SCF Calculation
+mpirun -np 4 pw.x < scf.in > scf.out
+
+# Error checking
+if [ $? -ne 0 ]; then
+    echo "CRITICAL ERROR: SCF calculation failed."
+    exit 1
+fi
+
+# Extract Fermi energy (if applicable) using grep and awk
+FERMI=$(grep -a "the Fermi energy is" scf.out | awk '{print $5}')
+echo "Extracted Fermi Energy: $FERMI eV"
+
+# 2. Run Bands Calculation (assuming bands.in is generated similarly)
+# bands.in must read from the same OUTDIR and PREFIX
+mpirun -np 4 pw.x < bands.in > bands.out
+if [ $? -ne 0 ]; then
+    echo "CRITICAL ERROR: Bands calculation failed."
+    exit 1
+fi
+
+# 3. Post-processing (bands.x)
+mpirun -np 1 bands.x < bands_pp.in > bands_pp.out
+```
+
+## 4. pymatgen High-Throughput Phase Diagrams
+
+`pymatgen` integrates heavily with the Materials Project API (via `MPRester`), enabling thermodynamic stability screening.
+
+### 4.1 Querying the Materials Project
+To construct a phase diagram for a specific chemical system (e.g., Li-Fe-O), one queries all known computed entries for that system.
+
+```python
+from pymatgen.ext.matproj import MPRester
+import os
+
+API_KEY = os.environ.get("MP_API_KEY") # Requires Materials Project API key
+with MPRester(API_KEY) as mpr:
+    # Query all entries in the Li-Fe-O chemical space
+    entries = mpr.get_entries_in_chemsys(["Li", "Fe", "O"])
+```
+
+### 4.2 Building Phase Diagrams and Convex Hulls
+The phase diagram represents the lowest-energy structural phases at varying compositions. The convex hull connects these stable ground-state phases.
+
+```python
+from pymatgen.analysis.phase_diagram import PhaseDiagram, PDPlotter
+
+# Construct the phase diagram from MP entries
+pd = PhaseDiagram(entries)
+
+# Plotting the diagram
+plotter = PDPlotter(pd, show_unstable=2.0) # Show unstable phases up to 2 eV/atom above hull
+plotter.get_plot().savefig("Li_Fe_O_phase_diagram.png")
+```
+
+### 4.3 Analyzing Thermodynamic Stability
+A critical workflow involves computing the energy of a newly proposed (perhaps ML-generated or computationally relaxed) crystal structure, converting it to a `ComputedEntry`, and determining its thermodynamic stability relative to known phases.
+
+```python
+from pymatgen.entries.computed_entries import ComputedEntry
+
+# Assume a newly computed LiFePO4 structure with DFT total energy -140.5 eV
+new_entry = ComputedEntry(composition="LiFePO4", energy=-140.5)
+
+# Calculate energy above the convex hull (e_above_hull)
+# e_above_hull == 0 indicates a stable phase on the hull
+# e_above_hull > 0 indicates instability (driving force for decomposition)
+ehull = pd.get_e_above_hull(new_entry)
+
+print(f"Energy above hull for new structure: {ehull:.4f} eV/atom")
+
+# Determine phase equilibria (decomposition products if unstable)
+if ehull > 0:
+    decomp = pd.get_decomposition(new_entry)
+    print("Decomposes into:")
+    for product_entry, fraction in decomp.items():
+        print(f"- {product_entry.composition.reduced_formula}: {fraction:.2f}")
+```

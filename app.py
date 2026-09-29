@@ -97,6 +97,8 @@ st.markdown("""
 <span class="badge">DFT Code Generator</span>
 <span class="badge">Neuromorphic Computing</span>
 <span class="badge">MACE / NequIP MLIPs</span>
+<span class="badge">AiiDA / ASE Workflows</span>
+<span class="badge">PennyLane QML</span>
 """, unsafe_allow_html=True)
 
 st.write("")
@@ -305,7 +307,8 @@ with tab2:
             "💻 Quantum Computing",
             "🧠 Machine Learning for Molecules",
             "📐 Statistical Mechanics",
-            "🧬 ML Interatomic Potentials"
+            "🧬 ML Interatomic Potentials",
+            "⚙️ Automated Workflows (AiiDA/ASE)"
         ])
     
     # Dynamic target types based on category
@@ -338,7 +341,12 @@ with tab2:
             "Qiskit — Grover's Search Algorithm",
             "Qiskit — VQE (Variational Quantum Eigensolver)",
             "Qiskit — Bell State Preparation & Measurement",
-            "Cirq — Quantum Circuit Simulation"
+            "Cirq — Quantum Circuit Simulation",
+            "Qiskit — Quantum Phase Estimation (QPE)",
+            "Qiskit — Quantum Machine Learning (VQC)",
+            "Qiskit — Hamiltonian Simulation (Trotterization)",
+            "PennyLane — VQE for Quantum Chemistry",
+            "PennyLane — Quantum Neural Network (QNN)"
         ],
         "🧠 Machine Learning for Molecules": [
             "Python — Molecular Graph Neural Network (MPNN)",
@@ -361,6 +369,12 @@ with tab2:
             "Allegro — YAML Training Configuration",
             "Python — DFT to Extended XYZ Data Pipeline (ASE)",
             "Python — ASE Calculator Setup (MACE/NequIP Deployment)"
+        ],
+        "⚙️ Automated Workflows (AiiDA/ASE)": [
+            "Python (ASE) — EOS (Equation of State) Workflow",
+            "Bash — Full DFT Pipeline (SCF -> Bands -> DOS)",
+            "AiiDA — Quantum Espresso WorkChain (PwBandsWorkChain)",
+            "Python (pymatgen) — High-Throughput Phase Diagram Generation"
         ]
     }
     

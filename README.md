@@ -16,7 +16,7 @@ Developed by **Abhijith Krishnan B M** â€” B.Tech-M.S. in Solid State Physi
 
 ## ðŸ“¸ Overview
 
-**AtomIQ** is an autonomous AI framework that bridges solid-state physics domain expertise with modern generative AI architectures. It employs a **dual-agent system** (Code Generator + Physics Critic) augmented by a **Retrieval-Augmented Generation (RAG)** pipeline to autonomously generate, validate, and refine production-ready simulation scripts across seven major domains of computational physics.
+**AtomIQ** is an autonomous AI framework that bridges solid-state physics domain expertise with modern generative AI architectures. It employs a **dual-agent system** (Code Generator + Physics Critic) augmented by a **Retrieval-Augmented Generation (RAG)** pipeline to autonomously generate, validate, and refine production-ready simulation scripts across 8 major domains of computational physics.
 
 Unlike generic code generation tools, AtomIQ retrieves domain-specific knowledge from an indexed physics knowledge base and pulls **live crystallographic data** from the Materials Project, AFLOW, OQMD, and PubChem APIs â€” ensuring every generated script uses physically accurate parameters (lattice constants, space groups, atomic positions, band gaps) rather than placeholder values.
 
@@ -27,7 +27,7 @@ Unlike generic code generation tools, AtomIQ retrieves domain-specific knowledge
 | **Physics grounding** | None â€” hallucinated parameters | RAG-augmented with indexed physics literature |
 | **Materials data** | Static, often incorrect | **Live Materials Project, AFLOW, OQMD, and PubChem APIs** â€” real lattice constants, band gaps |
 | **Validation** | No physics validation | **Dual-agent system** â€” Physics Critic reviews every script |
-| **Domain coverage** | General-purpose | 7 specialized physics domains, 39 script types |
+| **Domain coverage** | General-purpose | 8 specialized physics domains, 48 script types |
 | **LLM flexibility** | Single provider | **3 providers** â€” Groq (free), Gemini, Claude |
 
 ---
@@ -60,7 +60,7 @@ flowchart TD
 
 ---
 
-## âš¡ Code Generation â€” 6 Domains, 39 script types
+## âš¡ Code Generation â€” 8 Domains, 48 script types
 
 ### ðŸ”¬ 1. DFT & Electronic Structure (7 scripts)
 
