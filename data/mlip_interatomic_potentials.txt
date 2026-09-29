@@ -1,0 +1,318 @@
+================================================================================
+MACHINE-LEARNING INTERATOMIC POTENTIALS: MACE, NequIP, AND Allegro
+Reference Document for RAG-Assisted Script Generation
+================================================================================
+
+## 1. MACE (Multi-ACE / Molecular and Atomic Cluster Expansion)
+
+### 1.1 Architecture Overview
+- MACE combines the Atomic Cluster Expansion (ACE) formalism with equivariant
+  message passing on graphs.
+- Atomic environments are described using SO(3)-equivariant features constructed
+  from spherical harmonics Y_l^m and Clebsch-Gordan tensor products.
+- Key architectural advantage: by using higher-order message passing (symmetric
+  contractions of the ACE type), MACE constructs high body-order features—up to
+  4-body interactions with correlation=3—using only 2 interaction (message-passing)
+  layers, whereas standard MPNNs would require many more layers.
+- Each interaction block performs: (1) radial embedding with Bessel basis functions,
+  (2) tensor product of neighbor features with spherical harmonics of displacement
+  vectors, (3) symmetric contraction (ACE-like) to generate body-ordered features,
+  (4) linear readout for per-atom energy contribution.
+- Reference: Batatia, Kovacs, Simm, Ortner, Csanyi, NeurIPS 2022.
+  Repository: https://github.com/ACEsuit/mace
+
+### 1.2 Training CLI: mace_run_train
+The primary training entry point is the `mace_run_train` command-line tool.
+All key flags and their usage:
+
+  --name              : Run/model name, e.g., "MACE_model"
+  --train_file        : Path to training data in extended XYZ format
+  --valid_file        : Path to validation data (extxyz). Optional if valid_fraction is set.
+  --test_file         : Path to test data (extxyz). Optional.
+  --valid_fraction    : Fraction of training data to use as validation if --valid_file not given (e.g., 0.1)
+  --E0s               : Isolated atom energies. Either a dict string like "{1: -13.587, 6: -1029.86, 8: -2042.61}"
+                         mapping atomic number Z to energy in eV, or the string "average" to estimate
+                         via linear regression over the dataset.
+  --model             : Model type. Options: "MACE", "ScaleShiftMACE", "BOTNet".
+                         ScaleShiftMACE applies per-element scale and shift to energy predictions and
+                         is the recommended default for most applications.
+  --hidden_irreps     : Irreducible representations for hidden features, e.g., "128x0e + 128x1o".
+                         Format: "<multiplicity>x<l><parity>", where l is angular momentum order
+                         and parity is 'e' (even) or 'o' (odd). Common choices:
+                         "128x0e + 128x1o" (scalars + vectors),
+                         "256x0e" (scalars only, fastest),
+                         "128x0e + 128x1o + 128x2e" (up to l=2).
+  --r_max             : Cutoff radius in Angstroms. Typical range: 4.5 to 6.0 Å.
+                         Larger values capture longer-range interactions but increase cost.
+  --num_interactions  : Number of message-passing / interaction layers. Default and typical: 2.
+  --correlation       : Body-order correlation. correlation=3 yields 4-body interactions (nu+1 body).
+                         This is the recommended default. correlation=2 gives 3-body.
+  --max_ell           : Maximum angular momentum L for spherical harmonic expansion. Typical: 3.
+                         Higher values capture more angular detail at higher cost.
+  --num_radial_basis  : Number of radial basis functions (Bessel). Default: 8.
+  --num_cutoff_basis  : Number of radial envelope basis functions. Default: 5.
+  --batch_size        : Training batch size (number of structures). Typical: 10-32.
+  --valid_batch_size  : Validation batch size. Typical: same as or larger than batch_size.
+  --max_num_epochs    : Maximum training epochs. Typical: 500-2000.
+  --lr                : Initial learning rate. Default: 0.01. Common range: 0.001-0.01.
+  --scheduler         : Learning rate scheduler. Default: "ReduceLROnPlateau".
+                         Reduces LR when validation loss plateaus.
+  --patience          : Patience for ReduceLROnPlateau scheduler (epochs). Default: 50.
+  --energy_weight     : Weight for energy term in loss. Default: 1.0.
+  --forces_weight     : Weight for forces term in loss. Default: 100.0 (since force errors
+                         dominate training signal).
+  --stress_weight     : Weight for stress term in loss. Default: 1.0. Use when stress/virial
+                         data is available and stress prediction is needed.
+  --loss              : Loss function type. Options: "weighted" (default weighted MSE),
+                         "universal" (Huber-like robust loss).
+  --device            : Compute device. Options: "cuda", "cpu".
+  --default_dtype     : Data type. Options: "float32", "float64". Default: "float64".
+                         Use float64 for highest accuracy, float32 for speed.
+  --seed              : Random seed for reproducibility.
+  --swa               : Enable Stochastic Weight Averaging. Flag: store_true.
+  --start_swa         : Epoch at which SWA begins. Typical: max_num_epochs * 0.75.
+  --ema               : Enable Exponential Moving Average of weights. Flag: store_true.
+  --ema_decay         : Decay rate for EMA. Default: 0.99.
+  --amsgrad           : Use AMSGrad variant of Adam optimizer. Flag: store_true.
+  --restart_latest    : Restart training from latest checkpoint. Flag: store_true.
+  --clip_grad         : Gradient clipping value. Default: 10.0.
+
+### 1.3 Extended XYZ Data Format for MACE
+MACE reads training data in ASE-compatible extended XYZ format.
+Each frame consists of a two-line header followed by per-atom data:
+
+  Line 1: Number of atoms (integer)
+  Line 2: Key=value pairs including:
+    Lattice="ax ay az bx by bz cx cy cz"   (9 floats, row-major 3x3 cell matrix)
+    Properties=species:S:1:pos:R:3:forces:R:3
+    energy=-123.456789                       (total energy in eV)
+    stress="sxx syy szz syz sxz sxy"        (Voigt order, eV/Å³)
+    pbc="T T T"                              (periodic boundary conditions)
+  Lines 3+: <symbol> <x> <y> <z> <fx> <fy> <fz>
+
+  Example header:
+  64
+  Lattice="5.43 0.0 0.0 0.0 5.43 0.0 0.0 0.0 5.43" Properties=species:S:1:pos:R:3:forces:R:3 energy=-345.678 stress="0.01 0.02 0.01 0.0 0.0 0.0" pbc="T T T"
+  Si 0.0 0.0 0.0 0.001 -0.002 0.003
+  ...
+
+  Virial format alternative: instead of stress, provide virial="Vxx Vxy Vxz Vyx Vyy Vyz Vzx Vzy Vzz" in eV.
+  Stress and virial relation: stress_ij = -virial_ij / Volume.
+
+  Units convention: energies in eV, forces in eV/Å, positions in Å, stress in eV/Å³.
+
+### 1.4 MACE-MP-0 Foundation Model
+- Pre-trained on approximately 1.58 million DFT calculation frames from the
+  Materials Project trajectories (MPtrj) dataset.
+- Covers 89 chemical elements of the periodic table.
+- Available in three size variants: "small", "medium", "large".
+- Can be used for:
+  (a) Zero-shot property prediction across diverse chemistries.
+  (b) Fine-tuning on domain-specific datasets for improved accuracy.
+- Fine-tuning command example:
+  mace_run_train \
+    --name="fine_tuned_mace" \
+    --foundation_model="small" \
+    --train_file="train.xyz" \
+    --valid_file="valid.xyz" \
+    --E0s="average" \
+    --model="ScaleShiftMACE" \
+    --hidden_irreps="128x0e + 128x1o" \
+    --r_max=5.0 \
+    --batch_size=10 \
+    --max_num_epochs=200 \
+    --lr=0.001 \
+    --forces_weight=100.0 \
+    --device=cuda
+- Reference: Batatia et al., arXiv:2401.00096 (2024).
+
+### 1.5 MACE ASE Calculator
+  from mace.calculators import MACECalculator
+  calc = MACECalculator(model_paths="MACE_model.model", device="cuda", default_dtype="float64")
+  atoms.calc = calc
+  energy = atoms.get_potential_energy()    # eV
+  forces = atoms.get_forces()              # eV/Å
+
+================================================================================
+
+## 2. NequIP (Neural Equivariant Interatomic Potential)
+
+### 2.1 Architecture Overview
+- E(3)-equivariant graph neural network built on the e3nn library for tensor algebra.
+- Unlike invariant-feature GNNs (e.g., SchNet), NequIP updates atomic features as
+  full geometric tensors (scalars l=0, vectors l=1, higher-order tensors l=2+),
+  preserving directional information through all layers.
+- Key property: extremely high data efficiency. Accurate potentials can be trained
+  from as few as ~100-1000 DFT configurations, outperforming classical force fields
+  and invariant NNPs by large margins at small data sizes.
+- Reference: Batzner, Musaelian et al., Nature Communications 13, 2453 (2022).
+  Repository: https://github.com/mir-group/nequip
+
+### 2.2 YAML Configuration File Structure
+NequIP is configured entirely through a YAML file with these key sections:
+
+  # --- Section 1: Project Config ---
+  root: results/
+  run_name: my_nequip_run
+  seed: 123
+  append: true
+
+  # --- Section 2: Dataset Config ---
+  dataset: ase                             # dataset type; "ase" reads ASE-compatible files
+  dataset_file_name: ./data/train.xyz      # path to training data
+  ase_args:
+    format: extxyz
+  chemical_symbols:
+    - Si
+    - O
+  # Or use chemical_symbol_to_type to manually assign type indices
+
+  # --- Section 3: Model Config ---
+  r_max: 4.0                               # cutoff radius in Å (typical: 4.0-6.0)
+  num_layers: 4                            # number of interaction layers (typical: 4-6)
+  l_max: 2                                 # max angular momentum for features (typical: 1-2)
+  parity: true                             # include parity-odd representations (o3 vs so3)
+  num_features: 32                         # multiplicity of hidden irreps (typical: 16-64)
+  num_basis: 8                             # number of Bessel radial basis functions
+  BesselBasis_trainable: true
+  PolynomialCutoff_p: 6                    # exponent for polynomial envelope cutoff
+  invariant_layers: 2                      # MLP layers for final invariant block
+  invariant_neurons: 64                    # neurons per invariant MLP layer
+  avg_num_neighbors: auto                  # or specify integer; used for normalization
+  use_sc: true                             # use self-connection (skip connection)
+
+  # --- Section 4: Training Config ---
+  n_train: 900                             # number of training samples (or use dataset splits)
+  n_val: 100                               # number of validation samples
+  batch_size: 5                            # structures per batch (typical: 1-10)
+  max_epochs: 1000000                      # NequIP uses very many epochs with early stopping
+  learning_rate: 0.005                     # initial LR
+  optimizer_name: Adam
+  optimizer_amsgrad: true
+  loss_coeffs:
+    forces: 1.0                            # weight for force loss (MSE by default)
+    total_energy:
+      - 1.0                               # weight
+      - PerAtomMSELoss                     # loss type: scales by 1/N_atoms^2
+  metrics_components:
+    - - forces
+      - mae                               # report force MAE
+    - - total_energy
+      - mae
+  early_stopping_patiences:
+    validation_loss: 50
+  lr_scheduler_name: ReduceLROnPlateau
+  lr_scheduler_patience: 25
+  lr_scheduler_factor: 0.5
+
+### 2.3 NequIP CLI Commands
+  # Train a model:
+  nequip-train configs/example.yaml
+
+  # Deploy model for production use (compiles to TorchScript):
+  nequip-deploy build --train-dir ./results/my_nequip_run deployed_model.pth
+
+  # Evaluate on a dataset:
+  nequip-evaluate --train-dir ./results/my_nequip_run --dataset-config configs/example.yaml
+
+### 2.4 NequIP ASE Calculator
+  from nequip.ase import NequIPCalculator
+  calc = NequIPCalculator.from_deployed_model("deployed_model.pth", species_to_type_name={"Si": 0, "O": 1})
+  atoms.calc = calc
+
+### 2.5 NequIP LAMMPS Integration
+  In LAMMPS input script:
+    pair_style nequip
+    pair_coeff * * deployed_model.pth Si O
+  Requires the pair_nequip plugin compiled against the same PyTorch/LibTorch version.
+
+================================================================================
+
+## 3. Allegro (Scalable Equivariant Deep Learning Potential)
+
+### 3.1 Architecture Overview
+- Developed by the same MIR group at Harvard: Musaelian, Batzner, et al.
+  Published in Nature Communications 14, 579 (2023).
+- Key design difference from NequIP: Allegro eliminates message passing entirely.
+- Instead of iteratively exchanging information between atoms across the graph,
+  Allegro operates on strictly local, pairwise representations within the cutoff
+  sphere (r_cut). It constructs many-body equivariant features through tensor
+  products of edge-localized embeddings without inter-atom communication.
+- This yields O(N) computational complexity with minimal communication overhead.
+- Has been demonstrated to scale to simulations with 100 million+ atoms on
+  thousands of GPUs with excellent parallel efficiency.
+- Maintains accuracy competitive with NequIP while being significantly faster
+  for large-scale production simulations.
+- Repository: https://github.com/mir-group/allegro
+
+### 3.2 Allegro Configuration
+- Uses the same YAML configuration format and infrastructure as NequIP.
+- Install: `pip install allegro` (requires nequip as a dependency).
+- Additional Allegro-specific config keys:
+    parity: o3_full                        # or o3_restricted, so3
+    num_layers: 2                          # Allegro interaction layers (typical: 2)
+    l_max: 2                               # max L for equivariant features
+    env_embed_multiplicity: 32             # environment embedding multiplicity
+    embed_initial_edge: true
+    two_body_latent_mlp_latent_dimensions: [256, 256, 512]
+    latent_mlp_latent_dimensions: [512, 512]
+    env_embed_mlp_latent_dimensions: []    # empty for linear
+    edge_eng_mlp_latent_dimensions: [128]
+- Training command: `nequip-train configs/allegro_example.yaml`
+  (Allegro hooks into the NequIP training infrastructure.)
+
+================================================================================
+
+## 4. Training Data Pipeline
+
+### 4.1 Workflow
+DFT calculation (Quantum ESPRESSO / VASP / other) → atomic trajectories →
+ASE Atoms objects → extended XYZ files → MLIP training
+
+### 4.2 Data Preparation with ASE (Python)
+  from ase.io import read, write
+  # Read all frames from a trajectory or multi-frame file
+  frames = read('aimd_trajectory.traj', index=':')
+  # Or from VASP output
+  frames = read('vasprun.xml', index=':')
+  # Write to extended XYZ
+  write('dataset.xyz', frames, format='extxyz')
+
+### 4.3 Data Splitting
+Typical train/validation/test splits:
+  - 80% / 10% / 10% for moderate datasets (1000+ frames)
+  - 90% / 5% / 5% for smaller datasets
+  - Ensure splits are randomized but reproducible (fixed seed)
+  - For MACE: provide separate files via --train_file, --valid_file, --test_file
+    or use --valid_fraction for automatic splitting.
+  - For NequIP: use n_train and n_val keys in YAML config.
+
+### 4.4 Units Convention (Critical)
+  Energies:   eV
+  Forces:     eV/Å
+  Positions:  Å (Angstroms)
+  Stress:     eV/Å³ (for MACE extended XYZ)
+  Cell:       Å (3x3 matrix)
+
+================================================================================
+
+## 5. Atomic Reference Energies (E0s)
+
+- MACE subtracts per-atom reference energies before fitting the model.
+  This removes the large, element-dependent energy offset, letting the model
+  learn only the chemically relevant binding/interaction energy.
+- Explicit specification by atomic number Z:
+    --E0s="{14: -0.8496, 8: -1.8553}"
+  Values are the DFT total energy of an isolated atom of that element in eV.
+- Automatic estimation:
+    --E0s="average"
+  Performs a linear regression E_total = sum_i n_i * E0_i + residual across
+  the training dataset to estimate E0 per element. This is convenient but
+  less precise than computing true isolated-atom energies.
+- For NequIP, reference energies are handled via the dataset_statistics or
+  per_species_rescale_shifts / per_species_rescale_scales config keys, or
+  by pre-processing the dataset to subtract atomic energies before training.
+
+================================================================================
+END OF DOCUMENT
+================================================================================

@@ -21,3 +21,6 @@ scipy>=1.10.0
 
 # Materials Project Live API
 mp-api>=0.39.0
+
+# External APIs
+requests>=2.31.0

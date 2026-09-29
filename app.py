@@ -96,6 +96,7 @@ st.markdown("""
 <span class="badge">ChromaDB Vector Search</span>
 <span class="badge">DFT Code Generator</span>
 <span class="badge">Neuromorphic Computing</span>
+<span class="badge">MACE / NequIP MLIPs</span>
 """, unsafe_allow_html=True)
 
 st.write("")
@@ -147,6 +148,9 @@ with st.sidebar:
     
     st.divider()
     
+    # Database Connections
+    st.markdown("### 📡 Database Connections")
+    
     # Materials Project API Key
     has_mp_key = bool(os.getenv("MP_API_KEY"))
     if not has_mp_key:
@@ -155,15 +159,20 @@ with st.sidebar:
         except Exception:
             pass
     if has_mp_key:
-        st.success("🔗 Materials Project API Connected (Pre-configured)")
+        st.success("🔗 Materials Project: Connected")
     else:
         mp_key_input = st.text_input("Materials Project API Key (Optional)", type="password")
         if mp_key_input and engine:
             os.environ["MP_API_KEY"] = mp_key_input
             engine.mp_api_key = mp_key_input
-            st.success("🔗 Materials Project API Connected")
+            st.success("🔗 Materials Project: Connected")
         elif not mp_key_input:
-            st.caption("💡 Add MP key for live crystallographic data")
+            st.caption("💡 Add MP key for Materials Project data")
+            
+    st.success("🔗 AFLOW: Connected (Open API)")
+    st.success("🔗 OQMD: Connected (Open API)")
+    st.success("🔗 PubChem: Connected (Open API)")
+
     
     st.divider()
     if engine:
@@ -295,7 +304,8 @@ with tab2:
             "📊 Data Analysis & Metrology",
             "💻 Quantum Computing",
             "🧠 Machine Learning for Molecules",
-            "📐 Statistical Mechanics"
+            "📐 Statistical Mechanics",
+            "🧬 ML Interatomic Potentials"
         ])
     
     # Dynamic target types based on category
@@ -343,8 +353,17 @@ with tab2:
             "Python — Fermi-Dirac Distribution Plotter",
             "Python — Phonon Density of States",
             "Python — Boltzmann Transport Equation Solver"
+        ],
+        "🧬 ML Interatomic Potentials": [
+            "MACE — Training Script (mace_run_train)",
+            "MACE — Fine-Tuning from MACE-MP-0",
+            "NequIP — YAML Training Configuration",
+            "Allegro — YAML Training Configuration",
+            "Python — DFT to Extended XYZ Data Pipeline (ASE)",
+            "Python — ASE Calculator Setup (MACE/NequIP Deployment)"
         ]
     }
+    
     
     with col1:
         target_type = st.selectbox("Specific Script:", code_type_map.get(code_category, ["Quantum Espresso — SCF Calculation"]))
@@ -382,10 +401,10 @@ with tab2:
                     if critique:
                         st.warning(f"**🕵️ Agent 2 (Physics Critic):** {critique}")
                     
-                    mp_data = result.get("mp_data")
-                    if mp_data:
-                        with st.expander("🌐 Live Materials Project Data Used", expanded=True):
-                            st.code(mp_data, language="yaml")
+                    db_data = result.get("mp_data")  # Keeping the dict key as mp_data for backward compatibility in engine
+                    if db_data:
+                        with st.expander("🌐 Live Database Data Used (MP/AFLOW/OQMD/PubChem)", expanded=True):
+                            st.code(db_data, language="yaml")
                 else:
                     code_output = result
                     

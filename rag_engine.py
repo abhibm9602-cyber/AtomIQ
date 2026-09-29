@@ -12,6 +12,7 @@ import time
 import hashlib
 import json
 import re
+import requests
 from typing import Dict, List, Any, Optional
 from dotenv import load_dotenv
 
@@ -311,25 +312,37 @@ class AtomIQEngine:
             "generation_time": gen_time
         }
 
-    def fetch_materials_data(self, query: str) -> Optional[str]:
-        """Query the Materials Project API for real crystallographic data."""
-        if not self.mp_api_key:
-            return None
-        
-        # Extract chemical formula from the query using common patterns
+    def _extract_formula(self, query: str) -> Optional[str]:
+        """Extract a chemical formula from a query string."""
         formula_match = re.search(r'\b([A-Z][a-z]?(?:\d*[A-Z][a-z]?)*\d*)\b', query)
         if not formula_match:
             return None
-        
         formula = formula_match.group(1)
-        # Basic validation: must have at least one uppercase letter
         if not any(c.isupper() for c in formula) or len(formula) < 2:
             return None
-        
+        return formula
+
+    def _formula_to_aflow(self, formula: str) -> str:
+        """Convert a chemical formula to AFLOW alphabetical format with explicit stoichiometry.
+        e.g. GaN -> Ga1N1, SiO2 -> O2Si1, Al2O3 -> Al2O3
+        """
+        # Parse formula into element-count pairs
+        pairs = re.findall(r'([A-Z][a-z]?)(\d*)', formula)
+        elements = []
+        for el, count in pairs:
+            if el:  # skip empty matches
+                elements.append((el, count if count else '1'))
+        # Sort alphabetically by element symbol
+        elements.sort(key=lambda x: x[0])
+        return ''.join(f"{el}{ct}" for el, ct in elements)
+
+    def fetch_mp_data(self, formula: str) -> Optional[str]:
+        """Query the Materials Project API for real crystallographic data."""
+        if not self.mp_api_key:
+            return None
         try:
             from mp_api.client import MPRester
             with MPRester(self.mp_api_key) as mpr:
-                # Search for the material by formula
                 docs = mpr.materials.summary.search(
                     formula=formula,
                     fields=[
@@ -338,16 +351,11 @@ class AtomIQEngine:
                         "energy_above_hull", "is_stable"
                     ]
                 )
-                
                 if not docs:
                     return None
-                
-                # Use the most stable entry (lowest energy above hull)
                 doc = sorted(docs, key=lambda x: x.energy_above_hull if x.energy_above_hull is not None else 999)[0]
-                
                 lattice = doc.structure.lattice
-                
-                mp_text = f"""LIVE MATERIALS PROJECT DATA (mp-api) for {doc.formula_pretty}:
+                mp_text = f"""=== MATERIALS PROJECT DATA for {doc.formula_pretty} ===
 - Materials Project ID: {doc.material_id}
 - Formula: {doc.formula_pretty}
 - Crystal System: {doc.symmetry.crystal_system if doc.symmetry else 'N/A'}
@@ -369,15 +377,195 @@ class AtomIQEngine:
 - Atomic Positions (fractional):"""
                 for site in doc.structure:
                     mp_text += f"\n  {site.species_string}: ({site.frac_coords[0]:.6f}, {site.frac_coords[1]:.6f}, {site.frac_coords[2]:.6f})"
-                
                 return mp_text
-                
         except ImportError:
             print("[AtomIQ] mp-api not installed. Skipping Materials Project lookup.")
             return None
         except Exception as e:
             print(f"[AtomIQ] Materials Project API error: {e}")
             return None
+
+    def fetch_aflow_data(self, formula: str) -> Optional[str]:
+        """Query the AFLOW REST API for crystallographic data. No API key required."""
+        try:
+            aflow_formula = self._formula_to_aflow(formula)
+            url = f"http://aflow.org/API/aflux/?compound({aflow_formula}),format(json),paging(1)"
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()
+            payload = response.json()
+            if not payload:
+                return None
+            # AFLUX returns a dict with keys like '1 of N'
+            entry_keys = list(payload.keys())
+            if not entry_keys:
+                return None
+            entry = payload[entry_keys[0]]
+            geometry = entry.get('geometry', [])
+            geo_str = ""
+            if geometry and len(geometry) >= 6:
+                geo_str = f"""- Lattice Parameters:
+  a = {geometry[0]:.4f} Angstrom
+  b = {geometry[1]:.4f} Angstrom
+  c = {geometry[2]:.4f} Angstrom
+  alpha = {geometry[3]:.2f} degrees
+  beta  = {geometry[4]:.2f} degrees
+  gamma = {geometry[5]:.2f} degrees"""
+            aflow_text = f"""=== AFLOW DATABASE DATA for {entry.get('compound', formula)} ===
+- AFLOW UID: {entry.get('auid', 'N/A')}
+- Compound: {entry.get('compound', 'N/A')}
+- Space Group (Relaxed): {entry.get('spacegroup_relax', 'N/A')}
+- Bravais Lattice: {entry.get('bravais_lattice_relax', 'N/A')}
+{geo_str}
+- Band Gap: {entry.get('Egap', 'N/A')} eV
+- Band Gap Type: {entry.get('Egap_type', 'N/A')}
+- Energy per Atom: {entry.get('energy_atom', 'N/A')} eV/atom
+- Number of Atoms: {entry.get('natoms', 'N/A')}
+- Density: {entry.get('density', 'N/A')} g/cm^3"""
+            return aflow_text
+        except Exception as e:
+            print(f"[AtomIQ] AFLOW API error: {e}")
+            return None
+
+    def fetch_oqmd_data(self, formula: str) -> Optional[str]:
+        """Query the OQMD REST API for thermodynamic data. No API key required."""
+        try:
+            url = "http://oqmd.org/oqmdapi/formationenergy"
+            params = {
+                "composition": formula,
+                "fields": "name,entry_id,spacegroup,delta_e,stability,band_gap,natoms",
+                "limit": 5,
+                "format": "json"
+            }
+            response = requests.get(url, params=params, timeout=10)
+            response.raise_for_status()
+            payload = response.json()
+            data = payload.get("data", [])
+            if not data:
+                return None
+            # Select the most stable entry (lowest stability = closest to hull)
+            stable_entries = [d for d in data if d.get('stability') is not None]
+            if stable_entries:
+                entry = min(stable_entries, key=lambda x: abs(x.get('stability', 999)))
+            else:
+                entry = data[0]
+            oqmd_text = f"""=== OQMD DATABASE DATA for {entry.get('name', formula)} ===
+- OQMD Entry ID: {entry.get('entry_id', 'N/A')}
+- Composition: {entry.get('name', 'N/A')}
+- Space Group: {entry.get('spacegroup', 'N/A')}
+- Formation Energy (delta_e): {entry.get('delta_e', 'N/A')} eV/atom
+- Stability (Hull Distance): {entry.get('stability', 'N/A')} eV/atom
+- Band Gap: {entry.get('band_gap', 'N/A')} eV
+- Number of Atoms: {entry.get('natoms', 'N/A')}
+- Total OQMD Entries for {formula}: {payload.get('meta', {}).get('data_available', len(data))}"""
+            return oqmd_text
+        except Exception as e:
+            print(f"[AtomIQ] OQMD API error: {e}")
+            return None
+
+    def fetch_pubchem_data(self, query: str) -> Optional[str]:
+        """Query PubChem PUG REST API for molecular data. No API key required.
+        Detects molecular names or SMILES strings in the query."""
+        # List of common molecular keywords that indicate a PubChem query
+        mol_indicators = ['molecule', 'drug', 'compound', 'organic', 'smiles', 'molecular',
+                          'binding', 'ligand', 'inhibitor', 'protein', 'amino', 'polymer']
+        query_lower = query.lower()
+
+        # Check if query likely refers to a molecule (not an inorganic crystal)
+        is_molecular = any(ind in query_lower for ind in mol_indicators)
+
+        # Also check for SMILES-like patterns (contains special chars like =, #, @, parentheses with lowercase)
+        has_smiles = bool(re.search(r'[=#@\[\]]', query)) or bool(re.search(r'\b[A-Z][a-z]?(?:\([^)]+\))', query))
+
+        if not is_molecular and not has_smiles:
+            return None
+
+        try:
+            base_url = "https://pubchem.ncbi.nlm.nih.gov/rest/pug"
+            properties = "MolecularFormula,MolecularWeight,CanonicalSMILES,XLogP,TPSA,HBondDonorCount,HBondAcceptorCount,Complexity,Charge"
+
+            # Try to extract a compound name from the query
+            # Look for quoted strings or known molecule names
+            name_match = re.search(r'"([^"]+)"', query)  # quoted name
+            if name_match:
+                compound_name = name_match.group(1)
+            else:
+                # Use the first recognizable word that could be a compound name
+                # Filter out common non-compound words
+                skip_words = {'molecule', 'drug', 'compound', 'organic', 'molecular', 'binding',
+                              'ligand', 'simulation', 'calculation', 'energy', 'force', 'potential',
+                              'for', 'the', 'with', 'and', 'from', 'using', 'python', 'script'}
+                words = query.split()
+                compound_name = None
+                for word in words:
+                    clean = word.strip('",.:;()[]')
+                    if clean.lower() not in skip_words and len(clean) > 2 and not clean.isdigit():
+                        compound_name = clean
+                        break
+
+            if not compound_name:
+                return None
+
+            # Try name-based lookup
+            url = f"{base_url}/compound/name/{compound_name}/property/{properties}/JSON"
+            response = requests.get(url, timeout=10)
+
+            if response.status_code != 200:
+                return None
+
+            props = response.json().get("PropertyTable", {}).get("Properties", [])
+            if not props:
+                return None
+
+            p = props[0]
+            pubchem_text = f"""=== PUBCHEM MOLECULAR DATA for {compound_name} ===
+- PubChem CID: {p.get('CID', 'N/A')}
+- Molecular Formula: {p.get('MolecularFormula', 'N/A')}
+- Molecular Weight: {p.get('MolecularWeight', 'N/A')} g/mol
+- Canonical SMILES: {p.get('CanonicalSMILES', 'N/A')}
+- XLogP (Hydrophobicity): {p.get('XLogP', 'N/A')}
+- TPSA (Topological Polar Surface Area): {p.get('TPSA', 'N/A')} Angstrom^2
+- H-Bond Donors: {p.get('HBondDonorCount', 'N/A')}
+- H-Bond Acceptors: {p.get('HBondAcceptorCount', 'N/A')}
+- Complexity: {p.get('Complexity', 'N/A')}
+- Formal Charge: {p.get('Charge', 'N/A')}"""
+            return pubchem_text
+        except Exception as e:
+            print(f"[AtomIQ] PubChem API error: {e}")
+            return None
+
+    def fetch_materials_data(self, query: str) -> Optional[str]:
+        """Orchestrate queries across all available databases: Materials Project, AFLOW, OQMD, PubChem.
+        Returns combined data from all databases that return results."""
+        formula = self._extract_formula(query)
+        results = []
+
+        # 1. Materials Project (requires API key)
+        if formula:
+            mp_data = self.fetch_mp_data(formula)
+            if mp_data:
+                results.append(mp_data)
+
+        # 2. AFLOW (free, no key needed)
+        if formula:
+            aflow_data = self.fetch_aflow_data(formula)
+            if aflow_data:
+                results.append(aflow_data)
+
+        # 3. OQMD (free, no key needed)
+        if formula:
+            oqmd_data = self.fetch_oqmd_data(formula)
+            if oqmd_data:
+                results.append(oqmd_data)
+
+        # 4. PubChem (free, for molecular/organic queries)
+        pubchem_data = self.fetch_pubchem_data(query)
+        if pubchem_data:
+            results.append(pubchem_data)
+
+        if not results:
+            return None
+
+        return "\n\n".join(results)
 
     def generate_dft_or_code_script(self, target_type: str, parameters: str) -> Dict[str, Any]:
         """RAG-augmented dual-agent code generation: Generator + Critic + Live Materials Project data."""

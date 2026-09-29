@@ -1,0 +1,256 @@
+================================================================================
+MATERIALS DATABASES REFERENCE — RAG Knowledge Base
+Covers: Materials Project, AFLOW, OQMD, PubChem
+Last verified: 2026
+================================================================================
+
+################################################################################
+## 1. MATERIALS PROJECT (MP)
+################################################################################
+
+Website:        https://materialsproject.org
+Maintainer:     Lawrence Berkeley National Laboratory (Kristin Persson, PI)
+DFT code:       VASP (Vienna Ab initio Simulation Package)
+XC functional:  PBE (GGA) with GGA+U for select transition-metal oxides
+Python client:  mp_api.client.MPRester  (install via: pip install mp-api)
+
+--- Authentication ---
+An API key is required. Users register for free at materialsproject.org.
+Instantiate the client:
+    from mp_api.client import MPRester
+    mpr = MPRester("YOUR_API_KEY")
+Or set the environment variable MP_API_KEY and call MPRester() with no argument.
+
+--- Primary Query Pattern ---
+    docs = mpr.materials.summary.search(
+        formula="GaN",
+        fields=["material_id", "formula_pretty", "structure", "symmetry",
+                "band_gap", "formation_energy_per_atom", "energy_above_hull",
+                "is_stable"]
+    )
+Each element of `docs` is an MPDataDoc (pydantic model); access fields as attributes.
+
+--- Key Fields ---
+  material_id             : str   — unique MP identifier, e.g. "mp-830"
+  formula_pretty          : str   — human-readable formula, e.g. "GaN"
+  structure               : pymatgen Structure object
+  symmetry                : dict  — contains crystal_system (e.g. "hexagonal"),
+                                    symbol (e.g. "P6_3mc"), number (e.g. 186)
+  band_gap                : float — in eV (PBE value; typically underestimates)
+  formation_energy_per_atom : float — eV/atom, relative to elemental references
+  energy_above_hull       : float — eV/atom, distance above convex hull
+  is_stable               : bool  — True if energy_above_hull == 0
+
+--- Accessing the Structure ---
+    s = docs[0].structure
+    s.lattice.a, s.lattice.b, s.lattice.c          # lattice parameters in Angstroms
+    s.lattice.alpha, s.lattice.beta, s.lattice.gamma  # angles in degrees
+    s.frac_coords   # Nx3 numpy array of fractional coordinates
+    s.species       # list of Element/Species objects
+
+--- Ground-State Selection ---
+Sort results by energy_above_hull ascending; the entry with the smallest value
+(ideally 0.0) is the thermodynamic ground state at 0 K. Multiple polymorphs may
+appear; is_stable == True identifies convex-hull entries.
+
+
+################################################################################
+## 2. AFLOW (Automatic FLOW for Materials Discovery)
+################################################################################
+
+Website:        http://aflow.org
+Maintainer:     Prof. Stefano Curtarolo, Duke University
+DFT code:       VASP
+XC functional:  PBE (GGA)
+API key:        NOT required — completely open access
+
+--- AFLUX Search API ---
+Base URL:  http://aflow.org/API/aflux/?
+Query format (by compound):
+    http://aflow.org/API/aflux/?compound(Ga1N1),format(json),paging(1)
+
+CRITICAL — Alphabetical Element Ordering with Explicit Stoichiometry:
+  AFLOW requires elements listed in strict alphabetical order, each with an
+  explicit stoichiometry count (even if 1). Examples:
+    GaN   →  Ga1N1       (G before N alphabetically)
+    SiO2  →  O2Si1       (O before S alphabetically)
+    Al2O3 →  Al2O3       (Al before O — already alphabetical)
+    Fe2O3 →  Fe2O3       (Fe before O — already alphabetical)
+    NaCl  →  Cl1Na1      (Cl before Na alphabetically)
+  Getting this wrong returns zero results with no error message.
+
+--- Alternative: Search by Chemical System ---
+    http://aflow.org/API/aflux/?species(Ga,N),nspecies(2),format(json),paging(1)
+  Returns all binary phases containing Ga and N.
+
+--- Key Response Fields ---
+  auid                : str   — unique AFLOW identifier, e.g. "aflow:abcdef0123456789"
+  aurl                : str   — URL-style locator for the entry
+  compound            : str   — compound formula as stored
+  spacegroup_relax    : int   — space group number after relaxation
+  geometry            : str   — "a,b,c,alpha,beta,gamma" as comma-separated string
+                                (Angstroms and degrees)
+  Egap                : float — electronic band gap in eV
+  Egap_type           : str   — "insulator", "metal", or specific gap type
+  energy_atom         : float — total energy per atom in eV
+  enthalpy_formation_atom : float — formation enthalpy per atom in eV
+  bravais_lattice_relax : str — e.g. "FCC", "HEX", "BCC"
+  natoms              : int   — number of atoms in the unit cell
+  density             : float — mass density in g/cm^3
+
+--- Response Format ---
+The response is a JSON array of entry dictionaries. The geometry field is a
+single comma-separated string and must be parsed:
+    parts = entry["geometry"].split(",")
+    a, b, c = float(parts[0]), float(parts[1]), float(parts[2])
+    alpha, beta, gamma = float(parts[3]), float(parts[4]), float(parts[5])
+
+
+################################################################################
+## 3. OQMD (Open Quantum Materials Database)
+################################################################################
+
+Website:        http://oqmd.org
+Maintainer:     Prof. Chris Wolverton, Northwestern University
+DFT code:       VASP
+XC functional:  PBE (GGA) with PAW pseudopotentials
+API key:        NOT required — completely open access
+
+--- REST API ---
+Base URL:  http://oqmd.org/oqmdapi/formationenergy
+Query by exact composition:
+    http://oqmd.org/oqmdapi/formationenergy?composition=GaN&fields=name,entry_id,spacegroup,delta_e,stability,band_gap,unit_cell,natoms,sites&limit=50&format=json
+
+--- Query Parameters ---
+  composition : str   — exact formula (e.g. "GaN", "Si") or phase space (e.g. "Fe-O")
+  fields      : str   — comma-separated list of desired fields
+  limit       : int   — max entries to return (default varies, set explicitly)
+  offset      : int   — pagination offset
+  format      : str   — "json" (recommended) or "yaml"
+  filter      : str   — additional filter conditions:
+                         filter=stability=0      → ground-state entries only (on the hull)
+                         filter=stability<0.05   → entries within 50 meV/atom of hull
+
+--- Key Response Fields ---
+  entry_id    : int   — unique OQMD entry identifier
+  name        : str   — compound name/formula
+  spacegroup  : str   — space group symbol (e.g. "P6_3mc")
+  delta_e     : float — formation energy in eV/atom
+  stability   : float — distance above convex hull in eV/atom (0 = ground state)
+  band_gap    : float — in eV (PBE value)
+  unit_cell   : list  — 3x3 matrix [[a1x,a1y,a1z],[a2x,a2y,a2z],[a3x,a3y,a3z]]
+                         in Angstroms
+  natoms      : int   — number of atoms in the unit cell
+  sites       : list  — atomic site information (species + Cartesian coords)
+
+--- Response Structure ---
+    {
+      "links": { "next": "...", "previous": "..." },
+      "resource": {},
+      "data": [ { ... entry dict ... }, ... ],
+      "meta": { "query": { "representation": "..." },
+                "api_version": "...",
+                "time_stamp": "...",
+                "data_returned": <int>,
+                "data_available": <int>,
+                "comments": "",
+                "query_tree": "",
+                "more_data_available": <bool> }
+    }
+The "data" key holds the list of entry dictionaries. The "meta" key provides
+data_returned and data_available for pagination.
+
+
+################################################################################
+## 4. PubChem (Chemical Compound Database)
+################################################################################
+
+Website:        https://pubchem.ncbi.nlm.nih.gov
+Maintainer:     NIH / National Library of Medicine
+Scope:          Molecular / organic / small-molecule compounds (NOT crystalline solids)
+API key:        NOT required
+
+--- PUG REST API ---
+Base URL:  https://pubchem.ncbi.nlm.nih.gov/rest/pug
+
+URL pattern:
+    <base>/compound/<input_type>/<input_value>/property/<properties>/JSON
+
+Search by compound name:
+    https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/aspirin/property/MolecularFormula,MolecularWeight/JSON
+
+Search by CID (compound ID):
+    https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/2244/property/MolecularFormula,MolecularWeight,CanonicalSMILES/JSON
+
+Search by SMILES:
+    For SMILES strings, use a POST request to avoid URL-encoding issues:
+        import requests
+        url = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/smiles/property/MolecularFormula,MolecularWeight/JSON"
+        response = requests.post(url, data={"smiles": "CC(=O)OC1=CC=CC=C1C(=O)O"})
+    Alternatively for simple SMILES, GET works:
+        .../compound/smiles/CCO/property/MolecularFormula/JSON
+
+--- Available Properties ---
+  MolecularFormula    : str   — e.g. "C9H8O4"
+  MolecularWeight     : float — in g/mol
+  CanonicalSMILES     : str   — canonical SMILES representation
+  IsomericSMILES      : str   — includes stereochemistry
+  InChI               : str   — IUPAC International Chemical Identifier
+  InChIKey            : str   — hashed InChI (27-character string)
+  IUPACName           : str   — systematic name
+  XLogP               : float — computed octanol-water partition coefficient
+  ExactMass           : float — monoisotopic mass in Da
+  TPSA                : float — topological polar surface area in Angstrom^2
+  Complexity          : float — Bertz complexity index
+  Charge              : int   — formal charge
+  HBondDonorCount     : int   — number of hydrogen-bond donors
+  HBondAcceptorCount  : int   — number of hydrogen-bond acceptors
+  RotatableBondCount  : int   — rotatable bonds
+  HeavyAtomCount      : int   — non-hydrogen atoms
+
+--- Response Structure ---
+    {
+      "PropertyTable": {
+        "Properties": [
+          { "CID": 2244, "MolecularFormula": "C9H8O4", "MolecularWeight": 180.16, ... }
+        ]
+      }
+    }
+Access the first result: response_json["PropertyTable"]["Properties"][0]
+
+
+################################################################################
+## 5. CROSS-DATABASE VALIDATION NOTES
+################################################################################
+
+Lattice Parameters:
+  MP and AFLOW may report slightly different lattice constants for the same
+  compound because of different DFT settings: pseudopotential versions,
+  k-point meshes, energy cutoffs, and Hubbard U corrections (MP applies GGA+U
+  for certain transition-metal oxides; AFLOW generally does not).
+
+Formation Energies:
+  OQMD and MP formation energies can differ by tens of meV/atom due to different
+  choices of elemental reference states (which polymorph of each element is used
+  as the zero-energy reference) and different DFT settings.
+
+Band Gaps:
+  All three solid-state databases (MP, AFLOW, OQMD) report PBE-level band gaps,
+  which systematically underestimate experimental values by 30-50% for most
+  semiconductors and insulators. For more accurate gaps, look for GW or HSE06
+  calculations where available (MP provides some via the electronic_structure
+  endpoint).
+
+Ground-State Identification:
+  - MP: sort by energy_above_hull ascending; is_stable == True marks hull entries
+  - AFLOW: compare enthalpy_formation_atom across entries for the same compound
+  - OQMD: use filter=stability=0 or sort by stability ascending
+
+Domain Boundaries:
+  PubChem covers molecular and organic compounds. It does NOT contain data for
+  inorganic crystalline solids like GaN, Si, or Fe2O3. For those, use MP, AFLOW,
+  or OQMD. Conversely, MP/AFLOW/OQMD do not cover organic molecules or drugs.
+
+================================================================================
+END OF REFERENCE
+================================================================================
