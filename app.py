@@ -391,7 +391,7 @@ with tab2:
     with col1:
         target_type = st.selectbox("Specific Script:", code_type_map.get(code_category, ["Quantum Espresso — SCF Calculation"]))
     with col2:
-        system_input = st.text_input("Material/System Parameters:", "Al2O3 barrier 1.6 nm on ITO substrate, cutoff 40 Ry")
+        system_input = st.text_input("Material/System Parameters:", "", placeholder="e.g., Al2O3, cutoff 40 Ry, NequIP training on 1000 structures")
         
     if st.button("⚡ Generate Code Script"):
         if engine:
