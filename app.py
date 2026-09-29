@@ -99,6 +99,7 @@ st.markdown("""
 <span class="badge">MACE / NequIP MLIPs</span>
 <span class="badge">AiiDA / ASE Workflows</span>
 <span class="badge">PennyLane QML</span>
+<span class="badge">Data Visualization (pymatgen)</span>
 """, unsafe_allow_html=True)
 
 st.write("")
@@ -308,7 +309,8 @@ with tab2:
             "🧠 Machine Learning for Molecules",
             "📐 Statistical Mechanics",
             "🧬 ML Interatomic Potentials",
-            "⚙️ Automated Workflows (AiiDA/ASE)"
+            "⚙️ Automated Workflows (AiiDA/ASE)",
+            "📈 Post-Processing & Visualization"
         ])
     
     # Dynamic target types based on category
@@ -375,6 +377,13 @@ with tab2:
             "Bash — Full DFT Pipeline (SCF -> Bands -> DOS)",
             "AiiDA — Quantum Espresso WorkChain (PwBandsWorkChain)",
             "Python (pymatgen) — High-Throughput Phase Diagram Generation"
+        ],
+        "📈 Post-Processing & Visualization": [
+            "Python (pymatgen) — Band Structure Plotting",
+            "Python (pymatgen) — DOS & PDOS Visualization",
+            "Python (phonopy) — Phonon Dispersion & DOS",
+            "Python (matplotlib) — Convergence Analysis (Energy vs. Cutoff)",
+            "Python (py3Dmol) — Crystal Structure Visualization (Jupyter)"
         ]
     }
     

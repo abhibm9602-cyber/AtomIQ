@@ -1,0 +1,187 @@
+# AtomIQ Knowledge Base: Post-Processing and Visualization for Computational Materials Science
+
+This document details Python-based workflows, APIs, and scripts for post-processing and visualizing outputs from first-principles codes like VASP, Quantum ESPRESSO (QE), and Phonopy. These guidelines are crucial for programmatic generation of publication-quality plots and structure visualization in AtomIQ.
+
+## 1. Band Structure Plotting (pymatgen)
+
+The `pymatgen` library provides robust objects for parsing electronic structure data and generating band structure plots.
+
+### Parsing Electronic Structure
+For VASP, the `Vasprun` object is used to parse the XML output:
+```python
+from pymatgen.io.vasp.outputs import Vasprun
+# Initialize Vasprun object. parse_projected_eigen=True is required for orbital character.
+vrun = Vasprun("vasprun.xml", parse_projected_eigen=False)
+bs = vrun.get_band_structure(line_mode=True)
+```
+For Quantum ESPRESSO, `pymatgen.io.pwscf` handles outputs, though direct BS generation often relies on standardizing the k-path first.
+
+### Generating the Plot
+The `BSPlotter` class (`pymatgen.electronic_structure.plotter`) is the standard tool:
+```python
+from pymatgen.electronic_structure.plotter import BSPlotter
+import matplotlib.pyplot as plt
+
+bs_plotter = BSPlotter(bs)
+# Extract high-symmetry k-points and shift Fermi level to 0 eV
+# get_plot() returns a matplotlib Axes object
+ax = bs_plotter.get_plot(vbm_cbm_marker=True, ylim=(-5, 5))
+
+# Matplotlib kwargs for publication quality
+ax.set_title("Electronic Band Structure", fontsize=14, fontweight='bold')
+ax.tick_params(axis='both', which='major', labelsize=12)
+plt.savefig("band_structure.pdf", dpi=300, bbox_inches="tight")
+```
+
+## 2. DOS and PDOS Visualization (pymatgen)
+
+Density of States (DOS) and Projected Density of States (PDOS) analyses require careful handling of orbital projections and smearing parameters.
+
+### Parsing and Plotting Complete DOS
+```python
+from pymatgen.io.vasp.outputs import Vasprun
+from pymatgen.electronic_structure.plotter import DosPlotter
+
+vrun = Vasprun("vasprun.xml")
+complete_dos = vrun.complete_dos
+```
+
+### Adding Orbital Projections
+The `DosPlotter` class allows dictionary-based addition of DOS components. A Gaussian smearing parameter (sigma) can be applied if the underlying calculation used a tetrahedron method or insufficient smearing.
+```python
+plotter = DosPlotter(sigma=0.05) # Gaussian smearing with sigma = 0.05 eV
+plotter.add_dos("Total DOS", complete_dos)
+
+# Extract element-wise or orbital-wise projected DOS (s, p, d)
+element_dos = complete_dos.get_element_dos()
+for element, dos in element_dos.items():
+    plotter.add_dos(element, dos)
+
+# For specific spd orbital projections on a specific site:
+spd_dos = complete_dos.get_spd_dos()
+plotter.add_dos_dict(spd_dos)
+
+ax = plotter.get_plot(xlim=(-10, 10))
+ax.set_ylabel("Density of States (states/eV)", fontsize=12)
+plt.savefig("pdos_plot.png", dpi=300)
+```
+
+## 3. Phonon Dispersion Plotting (phonopy)
+
+Phonopy provides the standard framework for calculating and plotting phonon band structures.
+
+### Loading Data and Non-Analytical Term Correction (NAC)
+To compute longitudinal optical (LO) and transverse optical (TO) splitting, NAC requires Born effective charges and dielectric tensors.
+```python
+import phonopy
+
+# phonopy.load() reads phonopy.yaml along with force constants
+phonon = phonopy.load(supercell_matrix=[2, 2, 2],
+                      primitive_matrix='auto',
+                      unitcell_filename="POSCAR",
+                      force_constants_filename="FORCE_CONSTANTS")
+
+# Apply NAC if BORN file is present
+phonon.set_nac_params(nac_params=phonopy.file_IO.parse_BORN(phonon.primitive))
+```
+
+### Plotting Bands
+```python
+# Define k-path for the band structure
+path = [[[0.0, 0.0, 0.0], [0.5, 0.0, 0.5], [0.5, 0.5, 0.5]]]
+labels = ["$\Gamma$", "X", "L"]
+qpoints, connections = phonopy.phonon.band_structure.get_band_qpoints(path, 51)
+
+phonon.run_band_structure(qpoints, path_connections=connections, labels=labels)
+phonon.plot_band_structure().savefig("phonon_dispersion.pdf")
+```
+
+## 4. Convergence Analysis (Energy vs Cutoff/K-points)
+
+Systematic convergence testing requires parsing raw output files to extract total energies. The target convergence threshold is typically $\Delta E < 1$ meV/atom.
+
+### Parsing Output Files
+**Quantum ESPRESSO (scf.out):**
+```python
+import re
+import glob
+
+energies = []
+cutoffs = [30, 40, 50, 60, 70, 80] # ecutwfc values in Ry
+
+for ecut in cutoffs:
+    with open(f"scf_ecut{ecut}.out", "r") as f:
+        for line in f:
+            # Match QE total energy regex: '!    total energy              =     -123.456 Ry'
+            if re.match(r'^!\s+total energy', line):
+                energy_ry = float(line.split()[4])
+                energies.append(energy_ry * 13.605698) # Convert Ry to eV
+                break
+```
+
+**VASP (OUTCAR):**
+Standard shell command equivalent: `grep 'energy  without entropy' OUTCAR`
+```python
+energies_vasp = []
+for kpoints in [2, 4, 6, 8, 10]:
+    with open(f"kpt_{kpoints}/OUTCAR", "r") as f:
+        for line in f:
+            if "energy  without entropy" in line:
+                # Extracts the last occurrence which is the final SCF step
+                final_energy = float(line.split()[-1])
+        energies_vasp.append(final_energy)
+```
+
+### Convergence Plotting
+```python
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Convert to meV per atom (assuming N atoms)
+N_atoms = 2
+dE = np.abs(np.diff(energies)) * 1000 / N_atoms 
+
+fig, ax = plt.subplots()
+ax.plot(cutoffs[1:], dE, marker='o', linestyle='-', color='b')
+ax.axhline(1.0, color='r', linestyle='--', label='1 meV/atom threshold')
+ax.set_xlabel("Plane Wave Cutoff (Ry)")
+ax.set_ylabel("$\Delta E$ (meV/atom)")
+ax.legend()
+plt.savefig("convergence.png")
+```
+
+## 5. Crystal Structure Visualization (py3Dmol/ASE)
+
+Atomic Simulation Environment (ASE) coupled with `py3Dmol` enables interactive Jupyter notebook visualization.
+
+### Loading the Structure
+```python
+from ase.io import read
+import py3Dmol
+
+# Load POSCAR or .cif file
+atoms = read("POSCAR")
+
+# Write to temporary XYZ format for py3Dmol ingestion
+xyz_string = atoms.get_xyz_string()
+```
+
+### Visualizing with py3Dmol
+```python
+# Initialize py3Dmol viewer
+viewer = py3Dmol.view(width=400, height=400)
+viewer.addModel(xyz_string, 'xyz')
+
+# Apply styles: combination of stick and sphere
+viewer.setStyle({'sphere': {'scale': 0.3}, 'stick': {'radius': 0.15}})
+
+# Add unit cell boundary
+cell_matrix = atoms.get_cell().tolist()
+# py3Dmol currently lacks a native unit cell visualizer via direct ASE ingestion,
+# but unitcell can be visualized via adding a Box using the lattice vectors
+# (Implementation omitted for brevity, typical usage involves drawing lines)
+viewer.addUnitCell() # Standard method if supported by format
+
+viewer.zoomTo()
+viewer.show()
+```
