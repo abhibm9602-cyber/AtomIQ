@@ -32,6 +32,9 @@ from langchain_core.output_parsers import StrOutputParser
 # Load environment variables (.env)
 load_dotenv(override=True)
 
+class RateLimitExhaustedError(Exception):
+    pass
+
 class AtomIQEngine:
     """
     RAG & Agentic Engine for Solid-State Physics, DFT Simulations, 
@@ -685,10 +688,14 @@ REFINED CODE:
                 "context_used": context_chunks,
                 "retrieval_time": retrieval_time,
                 "generation_time": gen_time,
-                "mp_data": mp_data
+                "mp_data": mp_data,
+                "mp_id": mp_id
             }
         except Exception as e:
-            return {"code": f"# API Error: {e}", "initial_code": "", "critique": "", "context_used": [], "retrieval_time": 0, "generation_time": 0, "mp_data": None}
+            err_str = str(e).lower()
+            if '429' in err_str or 'rate' in err_str:
+                raise RateLimitExhaustedError(f"Rate limit exhausted: {e}")
+            return {"code": f"# API Error: {e}", "initial_code": "", "critique": "", "context_used": [], "retrieval_time": 0, "generation_time": 0, "mp_data": None, "mp_id": mp_id}
 
     def get_kb_stats(self) -> Dict[str, Any]:
         """Returns knowledge base statistics."""
