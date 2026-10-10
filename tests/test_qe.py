@@ -149,7 +149,7 @@ def run_tests():
                 result = engine.generate_dft_or_code_script('Quantum Espresso — SCF Calculation', mat)
                 if not isinstance(result, dict):
                     failures.append((mat, "Engine did not return dictionary"))
-                    time.sleep(6)
+                    time.sleep(120)
                     continue
                 
                 raw_code = result.get('code', '')
@@ -160,14 +160,14 @@ def run_tests():
                 if not mp_id:
                     failures.append((mat, "No MP-ID injected by engine"))
                     print(f"FAIL {mat}: No MP-ID injected")
-                    time.sleep(6)
+                    time.sleep(120)
                     continue
                 
                 # 2. Fetch ground truth for SPECIFIC mp_id
                 docs = mpr.materials.summary.search(material_ids=[mp_id], fields=["structure", "symmetry"])
                 if not docs:
                     failures.append((mat, f"Could not fetch truth for {mp_id}"))
-                    time.sleep(6)
+                    time.sleep(120)
                     continue
                 doc = docs[0]
                 mp_vol_per_atom = doc.structure.volume / doc.structure.num_sites
@@ -190,12 +190,12 @@ def run_tests():
                     if declared_nat != actual_nat:
                         failures.append((mat, f"Atom count mismatch: declared {declared_nat}, listed {actual_nat}"))
                         print(f"FAIL {mat}: Atom count mismatch")
-                        time.sleep(6)
+                        time.sleep(120)
                         continue
                 else:
                     failures.append((mat, "No 'nat' declared in system block"))
                     print(f"FAIL {mat}: No 'nat' declared")
-                    time.sleep(6)
+                    time.sleep(120)
                     continue
                     
                 # 3. Parse and Compare via Pymatgen
@@ -228,11 +228,14 @@ def run_tests():
                     print(f"FAIL {mat}: Parse Exception -> {parse_e}")
                     
             except Exception as e:
+                if "RateLimitExhausted" in str(e):
+                    print("Aborting benchmark due to persistent rate limits.")
+                    break
                 failures.append((mat, f"Exception: {e}"))
                 print(f"FAIL {mat}: Exception -> {e}")
             
-            print(f"Sleeping for 6 seconds to respect rate limits...")
-            time.sleep(6)
+            print(f"Sleeping for 120 seconds to respect rate limits...")
+            time.sleep(120)
 
     print("\n=== FINAL BENCHMARK SUMMARY ===")
     
