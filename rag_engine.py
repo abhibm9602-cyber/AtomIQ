@@ -1,3 +1,4 @@
+import config
 import sys
 if sys.platform.startswith('linux'):
     try:
@@ -116,9 +117,9 @@ class AtomIQEngine:
         if groq_key and groq_key.strip():
             try:
                 self.llm = ChatGroq(
-                    model_name="openai/gpt-oss-120b",
+                    model_name=config.GROQ_MODEL,
                     groq_api_key=groq_key.strip(),
-                    temperature=0.2
+                    temperature=0.0
                 )
                 self.active_provider = "Groq GPT-OSS 120B (Free)"
                 return
@@ -127,12 +128,12 @@ class AtomIQEngine:
 
         # Priority 2: Google Gemini
         if gemini_key and gemini_key.strip():
-            for model_name in ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"]:
+            for model_name in [config.GEMINI_MODEL]:
                 try:
                     self.llm = ChatGoogleGenerativeAI(
                         model=model_name,
                         google_api_key=gemini_key.strip(),
-                        temperature=0.2
+                        temperature=0.0
                     )
                     self.active_provider = f"Google Gemini ({model_name})"
                     return
@@ -143,9 +144,9 @@ class AtomIQEngine:
         if anthropic_key and anthropic_key.strip():
             try:
                 self.llm = ChatAnthropic(
-                    model_name="claude-3-5-sonnet-20240620",
+                    model_name=config.CLAUDE_MODEL,
                     anthropic_api_key=anthropic_key.strip(),
-                    temperature=0.2
+                    temperature=0.0
                 )
                 self.active_provider = "Claude 3.5 Sonnet"
                 return
@@ -390,7 +391,7 @@ class AtomIQEngine:
         try:
             aflow_formula = self._formula_to_aflow(formula)
             url = f"http://aflow.org/API/aflux/?compound({aflow_formula}),format(json),paging(1)"
-            response = requests.get(url, timeout=10)
+            response = requests.get(url, timeout=2)
             response.raise_for_status()
             payload = response.json()
             if not payload:
@@ -436,7 +437,7 @@ class AtomIQEngine:
                 "limit": 5,
                 "format": "json"
             }
-            response = requests.get(url, params=params, timeout=10)
+            response = requests.get(url, params=params, timeout=2)
             response.raise_for_status()
             payload = response.json()
             data = payload.get("data", [])
@@ -507,7 +508,7 @@ class AtomIQEngine:
 
             # Try name-based lookup
             url = f"{base_url}/compound/name/{compound_name}/property/{properties}/JSON"
-            response = requests.get(url, timeout=10)
+            response = requests.get(url, timeout=2)
 
             if response.status_code != 200:
                 return None
@@ -554,7 +555,7 @@ class AtomIQEngine:
         # 3. OQMD (free, no key needed)
         if formula:
             oqmd_data = self.fetch_oqmd_data(formula)
-            if oqmd_data:
+            if False:
                 results.append(oqmd_data)
 
         # 4. PubChem (free, for molecular/organic queries)
@@ -586,6 +587,11 @@ class AtomIQEngine:
         if mp_data:
             context_text = f"{mp_data}\n\n===== LOCAL KNOWLEDGE BASE CONTEXT =====\n\n{context_text}"
         
+        mp_id = None
+        match = re.search(r"Materials Project ID: (mp-\d+)", context_text)
+        if match:
+            mp_id = match.group(1)
+        
         # AGENT 1: GENERATOR
         prompt_gen = f"""/no_think
 You are a Computational Physics Code Generator with access to a specialized knowledge base.
@@ -602,6 +608,7 @@ CRITICAL RULES:
 - Do NOT include any thinking, reasoning, or explanation. Output ONLY the script code.
 - Do NOT use <think> tags.
 - If target_type contains 'Quantum Espresso', generate a valid .in SCF/NSCF input file with accurate parameters.
+  - For Quantum Espresso, ALWAYS use ibrav = 0 and explicitly define CELL_PARAMETERS (angstrom) and ATOMIC_POSITIONS (angstrom). NEVER use celldm or alat.
 - If target_type contains 'Python', generate a valid Python script.
 - Use specific numerical values from the knowledge base when available.
 - Provide ONLY code with clear explanatory comments. Do not wrap the output in markdown code blocks.

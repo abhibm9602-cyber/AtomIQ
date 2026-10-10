@@ -7,6 +7,7 @@ if sys.platform.startswith('linux'):
         pass
 
 import streamlit as st
+from startup_check import check_providers
 import os
 import tempfile
 from dotenv import load_dotenv
@@ -396,9 +397,18 @@ with tab2:
     if st.button("⚡ Generate Code Script"):
         if engine:
             with st.spinner("Agentic Workflow: Retrieving KB context, drafting, and critiquing script..."):
-                result = engine.generate_dft_or_code_script(target_type, system_input)
-                
-                if isinstance(result, dict):
+                try:
+                      result = engine.generate_dft_or_code_script(target_type, system_input)
+                  except Exception as e:
+                      err_str = str(e)
+                      if '429' in err_str or 'rate' in err_str.lower():
+                          st.error("⚠️ **Groq API Rate Limit Reached!** This public app runs on a free-tier API key which occasionally gets overloaded. Please try again in a few minutes, or clone the repo and add your own key to bypass this.")
+                      else:
+                          st.error(f"Error generating script: {e}")
+                      result = None
+                  
+                  if result and isinstance(result, dict):
+
                     code_output = result["code"]
                     initial_code = result.get("initial_code", "")
                     critique = result.get("critique", "")

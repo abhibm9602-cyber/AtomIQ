@@ -1,9 +1,9 @@
 # ⚛️ AtomIQ
 
-> **Autonomous Multi-Agent AI Framework for Computational Materials Science, DFT Simulation Automation, and Physics-Driven Code Generation**
+> **Two-Agent AI Framework for Computational Materials Science, DFT Simulation Automation, and Physics-Driven Code Generation**
 
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat&logo=python&logoColor=white)](https://www.python.org/)
-[![Groq Llama 3.3](https://img.shields.io/badge/Groq-Llama%203.3%2070B-F55036?style=flat&logo=meta&logoColor=white)](https://groq.com/)
+[![Groq Groq-hosted open-weight models (Llama 3.3 70B, GPT-OSS 120B)](https://img.shields.io/badge/Groq-Llama%203.3%2070B-F55036?style=flat&logo=meta&logoColor=white)](https://groq.com/)
 [![Google Gemini](https://img.shields.io/badge/Google-Gemini-4285F4?style=flat&logo=google&logoColor=white)](https://ai.google.dev/)
 [![Anthropic Claude](https://img.shields.io/badge/Anthropic-Claude%203.5-D97706?style=flat&logo=anthropic&logoColor=white)](https://www.anthropic.com/)
 [![ChromaDB](https://img.shields.io/badge/VectorDB-ChromaDB-FF6F61?style=flat)](https://www.trychroma.com/)
@@ -16,9 +16,9 @@ Developed by **Abhijith Krishnan B M** — B.Tech-M.S. in Solid State Physics, I
 
 ## 📸 Overview
 
-**AtomIQ** is an autonomous AI framework that bridges solid-state physics domain expertise with modern generative AI architectures. It employs a **dual-agent system** (Code Generator + Physics Critic) augmented by a **Retrieval-Augmented Generation (RAG)** pipeline to autonomously generate, validate, and refine production-ready simulation scripts across 9 major domains of computational physics.
+**AtomIQ** is a two-agent AI framework that bridges solid-state physics domain expertise with modern generative AI architectures. It employs a **dual-agent system** (Code Generator + Physics Critic) augmented by a **Retrieval-Augmented Generation (RAG)** pipeline to generate, review, and refine production-ready simulation scripts across 9 major domains of computational physics.
 
-Unlike generic code generation tools, AtomIQ retrieves domain-specific knowledge from an indexed physics knowledge base and pulls **live crystallographic data** from the Materials Project API — ensuring every generated script uses physically accurate parameters (lattice constants, space groups, atomic positions, band gaps) rather than placeholder values.
+Unlike generic code generation tools, AtomIQ retrieves domain-specific knowledge from an indexed physics knowledge base and pulls **live crystallographic data** from the Materials Project API — supplying Materials Project (DFT-computed) parameters to the generator to minimize placeholder values.
 
 ### What Makes AtomIQ Different
 
@@ -27,7 +27,7 @@ Unlike generic code generation tools, AtomIQ retrieves domain-specific knowledge
 | **Physics grounding** | None — hallucinated parameters | RAG-augmented with indexed physics literature |
 | **Materials data** | Static, often incorrect | **Live Materials Project, AFLOW, OQMD, and PubChem APIs** — real lattice constants, band gaps |
 | **Validation** | No physics validation | **Dual-agent system** — Physics Critic reviews every script |
-| **Domain coverage** | General-purpose | 6 specialized physics domains, 53 script types |
+| **Domain coverage** | General-purpose | 9 specialized physics domains, 52 script types |
 | **LLM flexibility** | Single provider | **3 providers** — Groq (free), Gemini, Claude |
 
 ---
@@ -36,13 +36,13 @@ Unlike generic code generation tools, AtomIQ retrieves domain-specific knowledge
 
 ```mermaid
 flowchart TD
-    A["📄 Physics Knowledge Base<br/>(20 documents, 258 vector chunks)"] -->|HuggingFace Embeddings<br/>all-MiniLM-L6-v2| B["🧠 ChromaDB Vector Store"]
+    A["📄 Physics Knowledge Base<br/>(19 documents, 258 vector chunks)"] -->|HuggingFace Embeddings<br/>all-MiniLM-L6-v2| B["🧠 ChromaDB Vector Store"]
     C["🔍 User Query / Material System"] --> D{"AtomIQ RAG Engine"}
     B -->|Semantic Retrieval<br/>Top-5 chunks| D
     MP["🌐 Materials Project API<br/>(Live crystallographic data)"] -->|mp-api query| D
     D -->|Context-enriched prompt| E["🤖 Agent 1: Code Generator"]
     E -->|Initial draft| F["🕵️ Agent 2: Physics Critic"]
-    F -->|Refined, validated script| G["✨ Production-Ready Output"]
+    F -->|Refined, reviewed draft| G["✨ Reviewed Output"]
     D -->|Direct RAG response| H["📖 Literature Synthesis"]
     
     style MP fill:#2CA02C,color:#fff
@@ -60,7 +60,7 @@ flowchart TD
 
 ---
 
-## ⚡ Code Generation — 6 Domains, 33 Script Types
+## ⚡ Code Generation — 9 Domains, 52 Script Types
 
 ### 🔬 1. DFT & Electronic Structure (7 scripts)
 
@@ -118,7 +118,7 @@ AI/ML pipelines for materials property prediction and high-throughput screening.
 
 | Script | Description |
 |---|---|
-| **Python — Crystal Graph Neural Network (CGCNN)** | Graph neural network for predicting material properties from crystal structure |
+| **Python — Crystal Graph Neural Network (CGCNN)** | Graph neural network for predicting molecular properties from graph representations |
 | **Python — Band Gap Prediction (Random Forest)** | Supervised ML model for electronic band gap prediction from compositional features |
 | **Python — Formation Energy Prediction** | Regression model for thermodynamic stability assessment |
 | **Python — Materials Project API Data Fetch** | Automated bulk data retrieval from the Materials Project database via `mp-api` |
@@ -174,7 +174,7 @@ Automated analysis and publication-quality figure generation.
 
 ---
 
-## 🌐 Live Materials Project, AFLOW, OQMD, and PubChem APIs Integration
+## 🌐 Live Materials Project API Integration
 
 When a chemical formula is detected in the user's input, AtomIQ automatically queries the Materials Project database and injects **real crystallographic data** into the code generation pipeline:
 
@@ -187,17 +187,17 @@ LIVE MATERIALS PROJECT DATA for Al2O3:
   Lattice Parameters:
     a: 4.8054 Å, b: 4.8054 Å, c: 13.1176 Å
     α: 90.00°, β: 90.00°, γ: 120.00°
-  Band Gap: 5.850 eV
+  Band Gap: 5.850 eV (PBE DFT value)
   Formation Energy: -3.4420 eV/atom
   Thermodynamically Stable: True
   Atomic Positions: [fractional coordinates for all sites]
 ```
 
-This ensures that every Quantum Espresso or VASP input file uses **experimentally validated** lattice constants and atomic positions — not LLM-hallucinated values.
+This supplies **DFT-computed** lattice constants and atomic positions — not LLM-hallucinated values.
 
 ---
 
-## 📚 Knowledge Base (15 Documents, 160 Vector Chunks)
+## 📚 Knowledge Base (19 Documents, 258 Vector Chunks)
 
 The RAG knowledge base spans the following domains:
 
@@ -213,7 +213,6 @@ The RAG knowledge base spans the following domains:
 | **Semiconductor Devices** | `semiconductor_device_physics.txt` | Fowler-Nordheim tunneling, MOS physics, band offsets |
 | **Quantum Information** | `quantum_information_theory.txt` | Qubits, entanglement, Bell inequalities, quantum error correction |
 | **Quantum Field Theory** | `quantum_field_theory_fundamentals.txt` | Path integrals, symmetry breaking, Higgs mechanism |
-| **QFT Textbook** | Peskin & Schroeder (PDF) | Complete QFT reference — Feynman diagrams, renormalisation |
 | **Statistical Mechanics** | `statistical_mechanics_thermodynamics.txt` | Partition functions, Ising model, phase transitions |
 | **ML for Materials** | `machine_learning_materials_science.txt` | CGCNN, MACE, NequIP, DeePMD, ML interatomic potentials |
 | **Molecular Dynamics** | `molecular_dynamics_simulations.txt` | Velocity-Verlet, thermostats, barostats, Green-Kubo |
@@ -232,9 +231,9 @@ AtomIQ automatically detects and connects to the best available LLM provider:
 
 | Provider | Model | Cost | Speed |
 |---|---|---|---|
-| **Groq** | Llama 3.3 70B / GPT-OSS 120B | **Free** (no API charges) | ⚡ Ultra-fast (Groq LPU) |
-| **Google** | Gemini 2.0 Flash / Pro | Free tier available | Fast |
-| **Anthropic** | Claude 3.5 Sonnet | Paid | Highest quality |
+| **Groq** | Groq-hosted open-weight models (Llama 3.3 70B, GPT-OSS 120B) 70B / GPT-OSS 120B | **Free** (no API charges) | ⚡ Ultra-fast (Groq LPU) |
+| **Google** | Gemini 1.5 Flash / Pro | Free tier available | Fast |
+| **Anthropic** | Claude Sonnet 5.5 | Paid | Highest quality |
 
 The system falls through providers automatically — if Groq is unavailable, it tries Gemini, then Claude. No configuration change needed.
 
@@ -277,7 +276,7 @@ AtomIQ/
 ├── rag_engine.py           # Core engine — RAG, dual-agent, Materials Project API
 ├── requirements.txt        # Python dependencies
 ├── Run_AtomIQ_App.bat      # Windows one-click launcher
-├── data/                   # Physics knowledge base (15 documents)
+├── data/                   # Physics knowledge base (19 documents)
 │   ├── condensed_matter_theory.txt
 │   ├── dft_computational_methods.txt
 │   ├── memristor_switching_mechanisms.txt
@@ -286,7 +285,7 @@ AtomIQ/
 │   ├── machine_learning_materials_science.txt
 │   ├── molecular_dynamics_simulations.txt
 │   ├── statistical_mechanics_thermodynamics.txt
-│   └── ... (15 files total)
+│   └── ... (19 files total)
 ├── chroma_db/              # Persistent ChromaDB vector store
 └── README.md
 ```
@@ -314,3 +313,6 @@ B.Tech-M.S. in Solid State Physics | Indian Institute of Space Science and Techn
 Former Intern, ISRO Space Applications Centre — Rubidium Atomic Clock Calibration & Precision Metrology
 
 - [GitHub](https://github.com/abhibm9602-cyber) | [Email](mailto:abhi.bm9602@gmail.com)
+
+
+
