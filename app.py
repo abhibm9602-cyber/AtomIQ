@@ -398,18 +398,17 @@ with tab2:
         if engine:
             with st.spinner("Agentic Workflow: Retrieving KB context, drafting, and critiquing script..."):
                 try:
-                      result = engine.generate_dft_or_code_script(target_type, system_input)
-                  except Exception as e:
-                      err_str = str(e)
-                      if '429' in err_str or 'rate' in err_str.lower():
-                          st.error("⚠️ **Groq API Rate Limit Reached!** This public app runs on a free-tier API key which occasionally gets overloaded. Please try again in a few minutes, or clone the repo and add your own key to bypass this.")
-                      else:
-                          st.error(f"Error generating script: {e}")
-                      result = None
-                  
-                  if result and isinstance(result, dict):
-
-                    code_output = result["code"]
+                    result = engine.generate_dft_or_code_script(target_type, system_input)
+                except Exception as e:
+                    err_str = str(e)
+                    if '429' in err_str or 'rate' in err_str.lower():
+                        st.error("⚠️ **Groq API Rate Limit Reached!** This public app runs on a free-tier API key which occasionally gets overloaded. Please try again in a few minutes, or clone the repo and add your own key to bypass this.")
+                    else:
+                        st.error(f"Error generating script: {e}")
+                    result = None
+                
+                if result and isinstance(result, dict):
+                    code_output = result.get("code", "")
                     initial_code = result.get("initial_code", "")
                     critique = result.get("critique", "")
                     context_used = result.get("context_used", [])
@@ -438,19 +437,20 @@ with tab2:
                     if db_data:
                         with st.expander("🌐 Live Database Data Used (MP/AFLOW/OQMD/PubChem)", expanded=True):
                             st.code(db_data, language="yaml")
-                else:
-                    code_output = result
-                    
-                st.markdown("### ✨ Final Refined Production Code:")
-                if "Python" in target_type or "Qiskit" in target_type or "Cirq" in target_type:
-                    lang = "python"
-                elif "LAMMPS" in target_type:
-                    lang = "bash"
-                elif "VASP" in target_type:
-                    lang = "text"
-                else:
-                    lang = "fortran"
-                st.code(code_output, language=lang)
+                            
+                    if code_output:
+                        st.markdown("### ✨ Final Refined Production Code:")
+                        if "Python" in target_type or "Qiskit" in target_type or "Cirq" in target_type:
+                            lang = "python"
+                        elif "LAMMPS" in target_type:
+                            lang = "bash"
+                        elif "VASP" in target_type:
+                            lang = "text"
+                        else:
+                            lang = "fortran"
+                        st.code(code_output, language=lang)
+                elif result and isinstance(result, str):
+                    st.code(result)
 
 # ---------------------------------------------------------
 # TAB 3: Upload Documents
